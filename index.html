@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="theme-color" content="#0e1117">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Reparto Solidario">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reparto Solidario de Huelga</title>
+<script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.1/dist/iife/sdk.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0e1117; --surf:#161b27; --card:#1e2535; --card2:#242d40;
+  --border:#2a3450; --border2:#334060;
+  --red:#ff5c5c; --redD:#c0392b;
+  --gold:#f5c518; --goldD:#c49a10;
+  --green:#2ecc71; --greenD:#1a9950;
+  --blue:#4da6ff; --blueD:#2980b9;
+  --muted:#6b7a99; --text:#e8eaf0; --text2:#9aa3be;
+  --r:10px; --r2:6px;
+  --trans:.18s ease;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+h1,h2,h3,.syne{font-family:'Syne',sans-serif}
+
+/* ── LAYOUT ───────────────────────────── */
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+aside{width:210px;min-width:210px;background:var(--surf);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.logo{padding:22px 18px 18px;border-bottom:1px solid var(--border)}
+.logo h1{font-size:14px;font-weight:800;color:var(--gold);letter-spacing:.03em;line-height:1.35}
+.logo p{font-size:11px;color:var(--muted);margin-top:2px}
+nav{padding:10px 0;flex:1}
+nav a{display:flex;align-items:center;gap:10px;padding:10px 18px;color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;border-left:3px solid transparent;transition:all var(--trans);cursor:pointer}
+nav a:hover{color:var(--text);background:rgba(255,255,255,.04)}
+nav a.active{color:var(--text);background:rgba(245,197,24,.06);border-left-color:var(--gold)}
+nav a .ni{font-size:17px;width:22px;text-align:center}
+.badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--red);color:#fff}
+.badge.ok{background:var(--green);color:#0e1117}
+
+/* MAIN */
+main{flex:1;overflow-y:auto;padding:28px 32px}
+.section{display:none}
+.section.active{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* PAGE HEADER */
+.ph{margin-bottom:24px}
+.ph h2{font-size:22px;font-weight:700}
+.ph p{color:var(--text2);font-size:14px;margin-top:3px}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:18px}
+.card-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:16px}
+
+/* KPI GRID */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;margin-bottom:18px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent,var(--gold))}
+.kpi.red{--accent:var(--red)}
+.kpi.green{--accent:var(--green)}
+.kpi.blue{--accent:var(--blue)}
+.kpi-label{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:6px}
+.kpi-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text)}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* ALERT */
+.alert{border-radius:var(--r2);padding:12px 16px;font-size:13px;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.alert.warn{background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.3);color:var(--gold)}
+.alert.ok{background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);color:var(--green)}
+.alert.err{background:rgba(255,92,92,.1);border:1px solid rgba(255,92,92,.3);color:var(--red)}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{background:var(--card2);padding:10px 14px;text-align:left;font-family:'Syne',sans-serif;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);white-space:nowrap}
+td{padding:10px 14px;border-top:1px solid var(--border);border-left:none;border-right:none;border-bottom:none;vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:600}
+.chip.sm{background:rgba(245,197,24,.15);color:var(--gold)}
+.chip.h{background:rgba(77,166,255,.15);color:var(--blue)}
+.chip.ok{background:rgba(46,204,113,.15);color:var(--green)}
+.chip.pend{background:rgba(255,92,92,.12);color:var(--red)}
+.amt{font-family:'Syne',sans-serif;font-weight:700;font-size:14px}
+.amt.neg{color:var(--gold)}
+.amt.pos{color:var(--green)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--r2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all var(--trans)}
+.btn-primary{background:var(--gold);color:#0e1117}
+.btn-primary:hover{background:var(--goldD)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.btn-red{background:rgba(255,92,92,.15);color:var(--red);border:1px solid rgba(255,92,92,.3)}
+.btn-red:hover{background:rgba(255,92,92,.25)}
+.btn-green{background:rgba(46,204,113,.15);color:var(--green);border:1px solid rgba(46,204,113,.3)}
+.btn-green:hover{background:rgba(46,204,113,.25)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+
+/* FORMS */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px}
+input[type=text],input[type=number],select{background:var(--card2);border:1px solid var(--border2);border-radius:var(--r2);padding:9px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;width:100%;transition:border var(--trans)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:none;border-color:var(--gold)}
+select option{background:var(--card2)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+/* SLIDER */
+.slider-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+input[type=range]{flex:1;-webkit-appearance:none;height:5px;background:var(--border2);border-radius:10px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--gold);cursor:pointer;box-shadow:0 0 0 3px rgba(245,197,24,.2)}
+.slider-val{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--gold);min-width:44px;text-align:right;flex-shrink:0}
+
+/* PROGRESS BAR */
+.prog-wrap{margin:6px 0}
+.prog-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px}
+.prog{height:8px;background:var(--border2);border-radius:10px;overflow:hidden}
+.prog-fill{height:100%;border-radius:10px;transition:width .4s ease}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:28px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:18px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+
+/* SIMULATOR */
+.sim-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.sim-card{background:var(--card2);border:1px solid var(--border);border-radius:var(--r2);padding:18px}
+.sim-card h4{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.sim-big{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:4px}
+.sim-sub{font-size:12px;color:var(--muted)}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-info h4{font-size:14px;font-weight:500}
+.toggle-info p{font-size:12px;color:var(--muted)}
+.toggle{position:relative;width:42px;height:24px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:var(--border2);border-radius:12px;transition:background var(--trans)}
+.toggle input:checked+.toggle-track{background:var(--green)}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform var(--trans)}
+.toggle input:checked~.toggle-thumb{transform:translateX(18px)}
+
+/* CHART BARS */
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:120px;padding:0 4px}
+.bar-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar{width:100%;border-radius:4px 4px 0 0;transition:height .4s ease;position:relative;min-height:4px}
+.bar-label{font-size:10px;color:var(--muted);text-align:center}
+.bar-val{font-size:10px;font-weight:700;position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap}
+
+/* RESPONSIVE */
+
+/* ── Desktop grande (>1200px) ── */
+@media(min-width:1200px){
+  main{max-width:860px}
+}
+
+/* ── Desktop normal (900-1200px) ── */
+@media(min-width:900px) and (max-width:1199px){
+  main{max-width:760px}
+  aside{width:180px;min-width:180px}
+}
+
+/* ── Tablet (700-899px) ── */
+@media(min-width:700px) and (max-width:899px){
+  aside{width:60px;min-width:60px}
+  .logo h1,.logo p{display:none}
+  .logo{padding:14px 8px}
+  nav a{padding:12px;justify-content:center}
+  nav a span:not(.ni){display:none}
+  .badge{display:none}
+  main{padding:24px 20px;max-width:100%}
+  .kpis{grid-template-columns:1fr 1fr}
+  .sim-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ── Móvil (<700px) ── */
+@media(max-width:699px){
+  .app{flex-direction:column}
+  aside{width:100%;min-width:unset;height:auto;border-right:none;border-bottom:1px solid var(--border);flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  .logo{padding:10px 14px;border-bottom:none;border-right:1px solid var(--border);min-width:fit-content}
+  .logo h1{font-size:11px;white-space:nowrap}
+  .logo p{display:none}
+  #sidebar-grupo{display:none!important}
+  nav{display:flex;flex-direction:row;padding:0;overflow-x:auto;flex:1}
+  nav a{flex-direction:column;gap:2px;padding:8px 10px;border-left:none;border-bottom:3px solid transparent;white-space:nowrap;min-width:fit-content}
+  nav a.active{border-left:none;border-bottom-color:var(--gold);background:rgba(245,197,24,.06)}
+  nav a span:not(.ni){font-size:10px;display:block}
+  nav a .ni{font-size:18px}
+  .badge{display:none}
+  main{padding:16px 14px;max-width:100%}
+  .kpis{grid-template-columns:1fr 1fr}
+  .grid2,.grid3,.sim-grid{grid-template-columns:1fr}
+  .ph h2{font-size:18px}
+}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:20px 0}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty .ei{font-size:40px;margin-bottom:12px}
+.empty p{font-size:14px}
+</style>
+</head>
+<body>
+
+<!-- ══ PANTALLA DE GRUPOS ══ -->
+<div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:9999;background:var(--bg);flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 20px;overflow-y:auto">
+  <div style="width:100%;max-width:440px">
+
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:40px;margin-bottom:8px">✊</div>
+      <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--gold)">Reparto Solidario</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Selecciona tu centro de trabajo</div>
+    </div>
+
+    <!-- Estado de conexión -->
+    <div id="ls-status" style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:16px">Conectando...</div>
+
+    <!-- Lista grupos -->
+    <div id="ls-lista" style="margin-bottom:16px"></div>
+
+    <!-- Botón crear nuevo grupo -->
+    <button id="ls-btn-nuevo" class="btn btn-primary" style="width:100%;margin-bottom:16px" onclick="lsToggleCrear()">+ Nuevo centro de trabajo</button>
+
+    <!-- Formulario crear grupo (oculto por defecto) -->
+    <div id="ls-form-crear" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px">Nuevo centro</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Nombre del centro</label>
+        <input id="ls-nombre" type="text" placeholder="Ej: Vilanova, Taller Nord...">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">PIN admin (4 dígitos)</label>
+        <input id="ls-pin-admin" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" style="flex:1" onclick="lsToggleCrear()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="lsCrearGrupo()">Crear</button>
+      </div>
+      <div id="ls-crear-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ MODAL PIN ══ -->
+<div id="pin-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:100%;max-width:320px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">🔐</div>
+    <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:4px" id="pin-modal-nombre"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Introduce el PIN para acceder</div>
+    <input id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="••••" style="text-align:center;font-size:24px;letter-spacing:8px;margin-bottom:16px">
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="pinCerrar()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" onclick="pinEntrar()">Entrar</button>
+    </div>
+    <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none">PIN incorrecto</div>
+  </div>
+</div>
+
+<div class="app" style="display:none" id="main-app">
+
+<!-- SIDEBAR -->
+<aside>
+  <div class="logo" style="cursor:default">
+    <h1>Reparto<br>Solidario</h1>
+    <p>Huelga · Calculadora</p>
+    <div id="sidebar-grupo" style="font-size:10px;color:var(--muted);margin-top:6px;display:flex;align-items:center;justify-content:space-between">
+    <span id="sidebar-grupo-nombre" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button onclick="cerrarSesion()" style="background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;padding:2px 4px;border-radius:4px;white-space:nowrap;margin-left:4px">✕ salir</button>
+  </div>
+</div>
+  <nav>
+    <a class="active" onclick="go('resumen')" data-tab="resumen">
+      <span class="ni">📊</span><span>Resumen</span>
+    </a>
+    <a onclick="go('companeros')" data-tab="companeros">
+      <span class="ni">👥</span><span>Compañeros</span>
+      <span class="badge" id="badge-pend">0</span>
+    </a>
+    <a onclick="go('config')" data-tab="config">
+      <span class="ni">⚙️</span><span>Configuración</span>
+    </a>
+    <a onclick="go('analisis')" data-tab="analisis">
+      <span class="ni">📈</span><span>Análisis</span>
+    </a>
+    <a onclick="go('simulador')" data-tab="simulador">
+      <span class="ni">🔮</span><span>Simulador</span>
+    </a>
+    <a onclick="go('historial')" data-tab="historial">
+      <span class="ni">📅</span><span>Historial</span>
+    </a>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<main>
+
+  <!-- ══ RESUMEN ══ -->
+  <div class="section active" id="s-resumen">
+    <div class="ph">
+      <h2>Contabilidad</h2>
+      <p id="res-subtitle">Estado actual de la caja</p>
+    </div>
+    <div id="res-alert"></div>
+
+    <!-- CAJA GRANDE -->
+    <div id="res-caja"></div>
+
+    <!-- DOS COLUMNAS: SM pagan / Huelguistas cobran -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title" style="color:var(--gold)">📤 SM deben pagar</div>
+        <div id="res-sm-pend"></div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title" style="color:var(--green)">📥 Huelguistas deben cobrar</div>
+        <div id="res-h-pend"></div>
+      </div>
+    </div>
+
+    <!-- kpis y progress ocultos, usados por analisis -->
+    <div style="display:none"><div id="res-kpis"></div><div id="res-progress"></div></div>
+  </div>
+
+  <!-- ══ COMPAÑEROS ══ -->
+  <div class="section" id="s-companeros">
+    <div class="ph">
+      <h2>Compañeros</h2>
+      <p>Gestiona la lista y marca quién ha pagado o cobrado</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="openModal('add-worker')">+ Añadir compañero</button>
+      <button class="btn btn-ghost" onclick="resetAllStatus()">↺ Resetear estados</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:20%">Nombre</th>
+            <th style="width:34%">Convenio</th>
+            <th style="width:24%">Situación</th>
+            <th style="width:14%">Importe</th>
+            <th style="width:8%"></th>
+          </tr>
+        </thead>
+        <tbody id="workers-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ CONFIGURACIÓN ══ -->
+  <div class="section" id="s-config">
+    <div class="ph">
+      <h2>Configuración</h2>
+      <p>Ajusta horas, convenios y complementos — todo se recalcula al instante</p>
+    </div>
+
+    <!-- Horas de huelga -->
+    <div class="card">
+      <div class="card-title">Horas de huelga</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:13px;color:var(--muted);flex-shrink:0">1h</span>
+        <input type="range" min="1" max="8" step="0.5" id="hours-slider" oninput="setHours(this.value)" style="flex:1;min-width:0">
+        <span style="font-size:13px;color:var(--muted);flex-shrink:0">8h</span>
+      </div>
+      <div style="text-align:center">
+        <span class="slider-val" id="hours-display">4h</span>
+      </div>
+      <div style="margin-top:12px;font-size:13px;color:var(--muted)">
+        Jornada completa = 8 horas. La huelga parcial se calcula proporcionalmente.
+      </div>
+    </div>
+
+    <!-- Convenios -->
+    <div class="card">
+      <div class="card-title">Convenios y salarios diarios</div>
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" onclick="openModal('add-conv')">+ Añadir convenio</button>
+      </div>
+      <div id="conv-list"></div>
+    </div>
+
+    <!-- Complementos -->
+    <div class="card">
+      <div class="card-title">Complementos salariales</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
+        Los valores se ponderan automáticamente según cuántos compañeros hay de cada convenio.
+      </p>
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" onclick="openModal('add-comp')">+ Añadir complemento</button>
+      </div>
+      <div id="comp-list"></div>
+    </div>
+
+    <!-- Info calculo -->
+    <div class="card">
+      <div class="card-title">Resumen del cálculo actual</div>
+      <div id="calc-info"></div>
+    </div>
+  </div>
+
+
+  <!-- ══ ANÁLISIS ══ -->
+  <div class="section" id="s-analisis">
+    <div class="ph">
+      <h2>Análisis del reparto</h2>
+      <p>Desglose completo del cálculo y comparativa visual</p>
+    </div>
+
+    <!-- hidden kpis used elsewhere -->
+    <div style="display:none"><div id="an-kpis"></div></div>
+
+    <!-- Gráfica comparativa principal -->
+    <div class="card">
+      <div class="card-title">Comparativa: sin reparto vs con reparto</div>
+      <div id="an-chart-compare" style="margin-top:8px"></div>
+    </div>
+
+    <!-- Desglose del coste — ancho completo -->
+    <div class="card">
+      <div class="card-title">Desglose del coste por persona</div>
+      <div id="an-desglose"></div>
+    </div>
+
+    <!-- Distribución por convenio — ancho completo -->
+    <div class="card">
+      <div class="card-title">Distribución por convenio y complementos</div>
+      <div id="an-convenios"></div>
+    </div>
+
+    <!-- Participación real -->
+    <div class="card">
+      <div class="card-title">Participación real en la jornada</div>
+      <div id="an-participacion"></div>
+    </div>
+
+    <!-- Progreso -->
+    <div class="card">
+      <div class="card-title">Progreso de pagos y cobros</div>
+      <div id="an-progress"></div>
+    </div>
+  </div>
+
+  <!-- ══ HISTORIAL ══ -->
+  <div class="section" id="s-historial">
+    <div class="ph">
+      <h2>Historial de huelgas</h2>
+      <p>Registro real de días convocados y acumulado económico</p>
+    </div>
+
+    <!-- Añadir día -->
+    <div class="card">
+      <div class="card-title">Registrar día de huelga</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Fecha</label>
+          <input type="date" id="hist-fecha" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Tipo de huelga</label>
+          <select id="hist-tipo" style="width:100%">
+            <option value="parcial">Parcial (horas configuradas)</option>
+            <option value="completa">Jornada completa (8h)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Nota (opcional)</label>
+          <input type="text" id="hist-nota" placeholder="Ej: Primera jornada, concentración...">
+        </div>
+        <button class="btn btn-primary" onclick="addHistorial()">+ Añadir día</button>
+      </div>
+    </div>
+
+    <!-- Acumulado -->
+    <div class="card">
+      <div class="card-title">Acumulado real</div>
+      <div id="hist-acumulado"></div>
+    </div>
+
+    <!-- Lista de días -->
+    <div class="card">
+      <div class="card-title">Días registrados</div>
+      <div id="hist-lista"></div>
+    </div>
+  </div>
+
+    <!-- ══ SIMULADOR ══ -->
+  <div class="section" id="s-simulador">
+    <div class="ph">
+      <h2>Simulador</h2>
+      <p>¿Cuántos días más podemos aguantar juntos?</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Número de días de huelga</div>
+      <div class="slider-wrap">
+        <span style="font-size:13px;color:var(--muted)">1</span>
+        <input type="range" min="1" max="15" step="1" id="days-slider" oninput="simUpdate(this.value)">
+        <span style="font-size:13px;color:var(--muted)">15</span>
+        <div class="slider-val" id="days-display">2</div>
+      </div>
+    </div>
+    <div class="sim-grid" id="sim-results"></div>
+    <div class="card" style="margin-top:18px">
+      <div class="card-title">Coste acumulado por persona</div>
+      <div id="sim-chart" style="margin-top:8px"></div>
+      <div style="display:flex;gap:20px;margin-top:12px;font-size:12px">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--red);border-radius:2px;display:inline-block"></span>Sin reparto</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--green);border-radius:2px;display:inline-block"></span>Con reparto</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--gold);border-radius:2px;display:inline-block"></span>Ahorro</span>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- ══ MODALS ══ -->
+
+<!-- Add worker -->
+<div class="modal-bg" id="modal-add-worker">
+  <div class="modal">
+    <h3>Añadir compañero</h3>
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="w-name" placeholder="Nombre completo">
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>Convenio</label>
+        <select id="w-conv"></select>
+      </div>
+      <div class="field">
+        <label>Situación</label>
+        <select id="w-sit">
+          <option value="H">Hizo huelga</option>
+          <option value="SM">Servicios Mínimos (trabajó)</option>
+          <option value="NP">No participa</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('add-worker')">Cancelar</button>
+      <button class="btn btn-primary" onclick="addWorker()">Añadir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit worker -->
+<div class="modal-bg" id="modal-edit-worker">
+  <div class="modal">
+    <h3>Editar compañero</h3>
+    <input type="hidden" id="ew-id">
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="ew-name">
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>Convenio</label>
+        <select id="ew-conv"></select>
+      </div>
+      <div class="field">
+        <label>Situación</label>
+        <select id="ew-sit">
+          <option value="H">Hizo huelga</option>
+          <option value="SM">Servicios Mínimos</option>
+          <option value="NP">No participa</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('edit-worker')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveWorker()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add convenio -->
+<div class="modal-bg" id="modal-add-conv">
+  <div class="modal">
+    <h3>Añadir convenio</h3>
+    <div class="field">
+      <label>Nombre del convenio</label>
+      <input type="text" id="cv-name" placeholder="Ej: Irvia Grupo 6">
+    </div>
+    <div class="field">
+      <label>Salario diario bruto (€)</label>
+      <input type="number" id="cv-salary" placeholder="67.91" step="0.01">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('add-conv')">Cancelar</button>
+      <button class="btn btn-primary" onclick="addConv()">Añadir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add complemento -->
+<div class="modal-bg" id="modal-add-comp">
+  <div class="modal">
+    <h3>Añadir complemento</h3>
+    <div class="field">
+      <label>Nombre del complemento</label>
+      <input type="text" id="cp-name" placeholder="Ej: Nocturnidad">
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+      Introduce el valor diario de este complemento para cada convenio:
+    </p>
+    <div id="cp-conv-fields"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('add-comp')">Cancelar</button>
+      <button class="btn btn-primary" onclick="addComp()">Añadir</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+const DEFAULTS = {
+  hours: 4,
+  simDays: 2,
+  workers: [
+    {id:1,  name:"Manel Jerez",    conv:"Irvia G5", sit:"SM", paid:true,  collected:false},
+    {id:2,  name:"Oriol Sibecas",  conv:"Irvia G6", sit:"SM", paid:true,  collected:false},
+    {id:3,  name:"Juan Sanchez",   conv:"Irvia G5", sit:"SM", paid:false, collected:false},
+    {id:4,  name:"Oscar Quesada",  conv:"Irvia G6", sit:"SM", paid:false, collected:false},
+    {id:5,  name:"Jesus Martin",   conv:"Irvia G6", sit:"SM", paid:false, collected:false},
+    {id:6,  name:"Alex Morda",     conv:"Irvia G6", sit:"H",  paid:false, collected:true },
+    {id:7,  name:"Farid",          conv:"Irvia G5", sit:"H",  paid:false, collected:true },
+    {id:8,  name:"David Sanchez",  conv:"Irvia G5", sit:"H",  paid:false, collected:false},
+    {id:9,  name:"Daniel Gismero", conv:"Irvia G6", sit:"H",  paid:false, collected:false},
+    {id:10, name:"Yasen",          conv:"Irvia G6", sit:"H",  paid:false, collected:false},
+    {id:11, name:"Luis",           conv:"Alstom",   sit:"H",  paid:false, collected:false},
+    {id:12, name:"Oscar Alonso",   conv:"Irvia G5", sit:"H",  paid:false, collected:false},
+    {id:13, name:"Sergio Moreida", conv:"Irvia G5", sit:"H",  paid:false, collected:false},
+    {id:14, name:"Ruben Sancho",   conv:"Irvia G5", sit:"H",  paid:false, collected:false},
+  ],
+  convenios: [
+    {id:"Irvia G6", name:"Irvia Grupo 6", salary: 2002.25/30},
+    {id:"Irvia G5", name:"Irvia Grupo 5", salary: 2063.39/30},
+    {id:"Alstom",   name:"Alstom",        salary: 68.78},
+  ],
+  complementos: [
+    {id:"noct", name:"Nocturnidad", vals:{"Irvia G6":19.76,"Irvia G5":19.76,"Alstom":39.28}},
+    {id:"grt",  name:"GRT",         vals:{"Irvia G6":3.15, "Irvia G5":3.15, "Alstom":10.76}},
+  ],
+  historial: [],
+};
+
+let S = {}; // loaded after login
+
+function loadState(datosJSON) {
+  try {
+    if (datosJSON) return JSON.parse(datosJSON);
+    const raw = localStorage.getItem('reparto-v2');
+    if (raw) return JSON.parse(raw);
+  } catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULTS));
+}
+
+function saveState() {
+  localStorage.setItem('reparto-v2', JSON.stringify(S));
+  // Sync to Appwrite if we have an active group
+  if (window.AW_DOC_ID) {
+    awSaveData(JSON.stringify(S)).catch(e => console.warn('Appwrite sync error:', e));
+  }
+}
+
+// ══════════════════════════════════════════════
+// CALCULATIONS
+// ══════════════════════════════════════════════
+function calc(hours) {
+  const h = hours ?? S.hours;
+  const workers = S.workers;
+  const convs = S.convenios;
+  const comps = S.complementos;
+  const active = workers.filter(w => w.sit !== 'NP');
+  const total = active.length;
+  const huelga = workers.filter(w => w.sit === 'H');
+  const sm = workers.filter(w => w.sit === 'SM');
+
+  // Weighted average salary (only active participants)
+  let salarySum = 0;
+  active.forEach(w => {
+    const cv = convs.find(c => c.id === w.conv);
+    salarySum += cv ? cv.salary : 0;
+  });
+  const avgSalary = total > 0 ? salarySum / total : 0;
+
+  // Weighted complementos — only active (H or SM), same as Excel O14 formula
+  let compTotal = 0;
+  comps.forEach(cp => {
+    let wSum = 0;
+    active.forEach(w => {
+      const v = cp.vals[w.conv] ?? 0;
+      wSum += v;
+    });
+    const avg = total > 0 ? wSum / total : 0;
+    compTotal += avg;
+  });
+  const compParcial = compTotal * (h / 8);
+
+  // Per-person loss without reparto
+  const lossFull  = avgSalary + compTotal;          // 8h
+  const lossParcial = (avgSalary * h/8) + compParcial; // partial
+
+  // Total fund
+  const fundParcial = lossParcial * huelga.length;
+  const fundFull    = lossFull    * huelga.length;
+
+  // Loss with reparto
+  const lossWithParcial = fundParcial / total;
+  const lossWithFull    = fundFull    / total;
+
+  // SM pays, H collects (net)
+  const smPays   = lossWithParcial;
+  const hCollects = lossParcial - lossWithParcial;
+
+  return {
+    total, nH: huelga.length, nSM: sm.length,
+    avgSalary, compParcial, compTotal,
+    lossParcial, lossFull,
+    fundParcial, fundFull,
+    lossWithParcial, lossWithFull,
+    smPays, hCollects,
+  };
+}
+
+function fmt(n) {
+  return n.toFixed(2).replace('.',',') + ' €';
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function go(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  // Set today's date on historial input if empty
+  const hf = document.getElementById('hist-fecha');
+  if (hf && !hf.value) hf.value = new Date().toISOString().split('T')[0];
+
+  document.querySelectorAll('nav a').forEach(a => {
+    a.classList.toggle('active', a.dataset.tab === tab);
+  });
+  document.getElementById('s-' + tab).classList.add('active');
+  render();
+}
+
+// ══════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════
+function render() {
+  renderResumen();
+  renderWorkers();
+  renderConfig();
+  renderAnalisis();
+  renderSim();
+  renderHistorial();
+  updateBadge();
+}
+
+function updateBadge() {
+  const pend = S.workers.filter(w =>
+    (w.sit === 'SM' && !w.paid) || (w.sit === 'H' && !w.collected)
+  ).length;
+  const b = document.getElementById('badge-pend');
+  b.textContent = pend;
+  b.className = 'badge' + (pend === 0 ? ' ok' : '');
+}
+
+// ── RESUMEN ──
+function renderResumen() {
+  const c = calc();
+  const totalSMPend = S.workers.filter(w => w.sit==='SM' && !w.paid).length;
+  const totalHPend  = S.workers.filter(w => w.sit==='H'  && !w.collected).length;
+  const pendTotal   = totalSMPend + totalHPend;
+
+  // Alert
+  const alertEl = document.getElementById('res-alert');
+  if (pendTotal === 0) {
+    alertEl.innerHTML = `<div class="alert ok">✅ El reparto está completamente liquidado. Todos han cumplido.</div>`;
+  } else if (pendTotal <= 3) {
+    alertEl.innerHTML = `<div class="alert warn">⚠️ Quedan ${pendTotal} movimiento${pendTotal>1?'s':''} pendiente${pendTotal>1?'s':''}.</div>`;
+  } else {
+    alertEl.innerHTML = `<div class="alert err">🔴 Faltan ${pendTotal} movimientos pendientes. El reparto no está cerrado.</div>`;
+  }
+
+  // Subtitle
+  document.getElementById('res-subtitle').textContent =
+    `${S.workers.length} compañeros · ${S.hours}h de huelga · ${c.nH} en huelga · ${c.nSM} en SM`;
+
+  // KPIs
+  document.getElementById('res-kpis').innerHTML = `
+    <div class="kpi red">
+      <div class="kpi-label">Sin reparto perdería</div>
+      <div class="kpi-val">${fmt(c.lossParcial)}</div>
+      <div class="kpi-sub">cada huelguista</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Con reparto pierde</div>
+      <div class="kpi-val">${fmt(c.lossWithParcial)}</div>
+      <div class="kpi-sub">cada huelguista</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Ahorro por persona</div>
+      <div class="kpi-val">${fmt(c.hCollects)}</div>
+      <div class="kpi-sub">gracias al grupo</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Fondo total del grupo</div>
+      <div class="kpi-val">${fmt(c.fundParcial)}</div>
+      <div class="kpi-sub">${c.nH} huelguistas × ${fmt(c.lossParcial)}</div>
+    </div>
+  `;
+
+  // ── CAJA DEL ORGANIZADOR ──
+  const smWorkers  = S.workers.filter(w=>w.sit==='SM');
+  const hWorkers   = S.workers.filter(w=>w.sit==='H');
+  const smPaid     = smWorkers.filter(w=>w.paid);
+  const smPending  = smWorkers.filter(w=>!w.paid);
+  const hCollected = hWorkers.filter(w=>w.collected);
+  const hPending   = hWorkers.filter(w=>!w.collected);
+
+  const cajaEnMano    = smPaid.length * c.smPays;
+  const cajaEntregada = hCollected.length * c.hCollects;
+  const cajaReal      = cajaEnMano - cajaEntregada;
+  const pendCobrar    = smPending.length * c.smPays;
+  const pendEntregar  = hPending.length * c.hCollects;
+
+  document.getElementById('res-caja').innerHTML = `
+    <!-- CIFRA PRINCIPAL: DINERO EN MANO -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px 28px 22px;margin-bottom:18px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--green),var(--blue))"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px">💵 Dinero en mano ahora mismo</div>
+      <div style="font-family:'Syne',sans-serif;font-size:52px;font-weight:800;color:${cajaReal>=0?'var(--green)':'var(--red)'};line-height:1">${fmt(cajaReal)}</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px">Cobrado de SM (${fmt(cajaEnMano)}) menos entregado a huelguistas (${fmt(cajaEntregada)})</div>
+
+      <!-- 3 bloques simétricos -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-top:20px;padding-top:18px;border-top:1px solid var(--border)">
+        ${[
+          {icon:'📥', label:'Cobrado SM',       val:fmt(cajaEnMano),  col:'var(--gold)',  sub:smPaid.length+' de '+smWorkers.length+' pagaron',    pct:smWorkers.length>0?smPaid.length/smWorkers.length*100:0,    barCol:'var(--gold)'},
+          {icon:'📤', label:'Entregado huelga', val:fmt(cajaEntregada),col:'var(--blue)', sub:hCollected.length+' de '+hWorkers.length+' cobraron', pct:hWorkers.length>0?hCollected.length/hWorkers.length*100:0,  barCol:'var(--blue)'},
+          {icon:'⏳', label:'Pte. cobrar',      val:fmt(pendCobrar),  col:smPending.length>0?'var(--red)':'var(--green)', sub:smPending.length+' SM sin pagar', pct:smWorkers.length>0?smPending.length/smWorkers.length*100:0, barCol:'var(--red)'},
+        ].map((b,i) => `
+          <div style="padding:0 ${i===1?'10px':i===0?'10px 10px 0':'0 0 0 10px'};border-left:${i>0?'1px solid var(--border)':'none'}">
+            <div style="font-size:10px;color:var(--muted);height:28px;display:flex;align-items:center;gap:4px">${b.icon} ${b.label}</div>
+            <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:${b.col};height:26px;display:flex;align-items:center;white-space:nowrap">${b.val}</div>
+            <div style="font-size:10px;color:var(--muted);height:28px;display:flex;align-items:center">${b.sub}</div>
+            <div style="height:4px;background:var(--border2);border-radius:4px;margin-top:4px">
+              <div style="height:4px;width:${b.pct}%;background:${b.barCol};border-radius:4px;transition:width .4s"></div>
+            </div>
+          </div>`
+        ).join('')}
+      </div>
+    </div>
+  `;
+
+  // ── LISTAS PENDIENTES ──
+  const ROW = (dot, name, done, amtTxt, amtCol, btnClass, btnTxt, id) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="flex-shrink:0;width:8px;height:8px;border-radius:50%;background:${dot};display:inline-block"></span>
+      <span style="flex:1;font-size:13.5px;font-weight:${done?'400':'600'};color:${done?'var(--muted)':'var(--text)'}">${name}</span>
+      <span style="flex-shrink:0;width:90px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:${amtCol};text-align:right">${amtTxt}</span>
+      <div style="flex-shrink:0;width:115px;text-align:right">
+        <button class="btn btn-sm ${btnClass}" onclick="toggleStatus(${id});render()" style="padding:4px 10px;font-size:11px;width:100%">${btnTxt}</button>
+      </div>
+    </div>`;
+
+  document.getElementById('res-sm-pend').innerHTML = smWorkers.length === 0
+    ? `<p style="color:var(--muted);font-size:13px">No hay SM.</p>`
+    : smWorkers.map(w => ROW(
+        w.paid ? 'var(--green)' : 'var(--red)',
+        w.name,
+        w.paid,
+        w.paid ? '✔ Pagado' : '−' + fmt(c.smPays),
+        w.paid ? 'var(--muted)' : 'var(--gold)',
+        w.paid ? 'btn-ghost' : 'btn-primary',
+        w.paid ? '↺ Deshacer' : 'Marcar pagado',
+        w.id
+      )).join('');
+
+  document.getElementById('res-h-pend').innerHTML = hWorkers.length === 0
+    ? `<p style="color:var(--muted);font-size:13px">No hay huelguistas.</p>`
+    : hWorkers.map(w => ROW(
+        w.collected ? 'var(--green)' : 'var(--red)',
+        w.name,
+        w.collected,
+        w.collected ? '✔ Cobrado' : '+' + fmt(c.hCollects),
+        w.collected ? 'var(--muted)' : 'var(--green)',
+        w.collected ? 'btn-ghost' : 'btn-green',
+        w.collected ? '↺ Deshacer' : 'Marcar cobrado',
+        w.id
+      )).join('');
+
+  // Progress
+  const smDone  = smPaid.length;
+  const hDone   = hCollected.length;
+  document.getElementById('res-progress').innerHTML = `
+    <div class="prog-wrap">
+      <div class="prog-label">
+        <span>SM — pagos realizados</span>
+        <span style="color:var(--gold)">${smDone} / ${c.nSM}</span>
+      </div>
+      <div class="prog"><div class="prog-fill" style="width:${c.nSM>0?smDone/c.nSM*100:0}%;background:var(--gold)"></div></div>
+    </div>
+    <div class="prog-wrap" style="margin-top:12px">
+      <div class="prog-label">
+        <span>Huelguistas — cobros realizados</span>
+        <span style="color:var(--green)">${hDone} / ${c.nH}</span>
+      </div>
+      <div class="prog"><div class="prog-fill" style="width:${c.nH>0?hDone/c.nH*100:0}%;background:var(--green)"></div></div>
+    </div>
+  `;
+}
+
+function barGroup(val, max, col, label) {
+  // Returns a TD cell for use inside a fixed table
+  const BAR_H = 120;
+  const h = max > 0 ? Math.max(4, Math.round(BAR_H * val / max)) : 4;
+  return `<td style="text-align:center;vertical-align:bottom;padding:0 3px">
+    <div style="font-size:10px;font-weight:700;color:${col};margin-bottom:4px;white-space:nowrap">${fmt(val)}</div>
+    <div style="height:${h}px;background:${col};border-radius:4px 4px 0 0"></div>
+  </td>`;
+}
+function barLabelCell(label) {
+  return `<td style="text-align:center;padding:6px 2px 0;vertical-align:top;font-size:10px;color:var(--muted);line-height:1.3;word-break:break-word">${label}</td>`;
+}
+
+// ── WORKERS ──
+function renderWorkers() {
+  const c = calc();
+  const tbody = document.getElementById('workers-table');
+  if (S.workers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="ei">👥</div><p>No hay compañeros. Añade el primero.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = S.workers.map(w => {
+    const isH = w.sit === 'H';
+    const isNP = w.sit === 'NP';
+    const done = isH ? w.collected : w.paid;
+    const importe = isH ? c.hCollects : c.smPays;
+    const sign = isH ? '+' : '−';
+    const amtCol = isH ? 'pos' : 'neg';
+    const chip = isH
+      ? `<span class="chip h">Huelga</span>`
+      : `<span class="chip sm">SM</span>`;
+    const status = done
+      ? `<span class="chip ok">✔ Completado</span>`
+      : `<span class="chip pend">${isH ? '⏳ Pte. cobrar' : '⏳ Pte. pagar'}</span>`;
+    const toggleLabel = done
+      ? (isH ? 'Marcar pendiente' : 'Marcar pendiente')
+      : (isH ? 'Marcar cobrado' : 'Marcar pagado');
+    const toggleClass = done ? 'btn-ghost' : (isH ? 'btn-green' : 'btn-primary');
+    const convOptions = S.convenios.map(cv =>
+      `<option value="${cv.id}" ${cv.id===w.conv?'selected':''}>${cv.name}</option>`
+    ).join('');
+    const convLabel = (S.convenios.find(cv=>cv.id===w.conv)||{name:w.conv}).name;
+    const sitOptions = `
+      <option value="H"  ${w.sit==='H' ?'selected':''}>Huelga</option>
+      <option value="SM" ${w.sit==='SM'?'selected':''}>Serv. Mínimos</option>
+      <option value="NP" ${w.sit==='NP'?'selected':''}>No participa</option>`;
+    return `
+      <tr>
+        <td style="font-size:13px"><strong>${w.name}</strong></td>
+        <td style="overflow:visible">
+          <select style="width:100%;min-width:120px;background:var(--card2);border:1px solid var(--border2);border-radius:5px;padding:6px 4px;color:var(--text);font-size:12px;cursor:pointer"
+            onchange="inlineUpdateWorker(${w.id},'conv',this.value)">
+            ${convOptions}
+          </select>
+        </td>
+        <td style="overflow:visible">
+          <select style="width:100%;min-width:110px;background:var(--card2);border:1px solid var(--border2);border-radius:5px;padding:6px 4px;font-size:12px;cursor:pointer;color:${isNP?'var(--muted)':isH?'var(--blue)':'var(--gold)'};font-weight:600"
+            onchange="inlineUpdateWorker(${w.id},'sit',this.value)">
+            ${sitOptions}
+          </select>
+        </td>
+        <td style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:${isH?'var(--green)':'var(--gold)'};text-align:right;white-space:nowrap">${isNP?'—':((isH?'+':'−')+fmt(importe))}</td>
+        <td style="text-align:right">
+          <button class="btn btn-red btn-sm" onclick="deleteWorker(${w.id})" style="padding:5px 6px">✕</button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+
+// ── ANÁLISIS ──
+function svgBar(val, max, col, label, sublabel) {
+  const BAR_H = 120;
+  const pct = max > 0 ? Math.max(3, (val / max) * 100) : 3;
+  const barPx = Math.round(BAR_H * pct / 100);
+  return `
+    <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
+      <!-- price always same height row -->
+      <div style="height:28px;display:flex;align-items:center;justify-content:center;width:100%">
+        <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:${col};text-align:center;white-space:nowrap">${fmt(val)}</span>
+      </div>
+      <!-- bar zone: position:relative so bar sits at bottom via position:absolute -->
+      <div style="width:100%;height:${BAR_H}px;position:relative;padding:0 4px;box-sizing:border-box">
+        <div style="position:absolute;bottom:0;left:4px;right:4px;height:${barPx}px;background:${col};border-radius:4px 4px 0 0"></div>
+      </div>
+      <!-- shared baseline -->
+      <div style="width:100%;height:2px;background:var(--border2)"></div>
+      <!-- labels -->
+      <div style="padding-top:7px;text-align:center">
+        <div style="font-size:11.5px;color:var(--text);font-weight:500;line-height:1.3">${label}</div>
+        ${sublabel ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${sublabel}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderAnalisis() {
+  const c = calc();
+  const smW = S.workers.filter(w=>w.sit==='SM');
+  const hW  = S.workers.filter(w=>w.sit==='H');
+
+  // KPIs
+  document.getElementById('an-kpis').innerHTML = `
+    <div class="kpi red">
+      <div class="kpi-label">Pérdida sin reparto</div>
+      <div class="kpi-val">${fmt(c.lossParcial)}</div>
+      <div class="kpi-sub">por huelguista (${S.hours}h)</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Pérdida con reparto</div>
+      <div class="kpi-val">${fmt(c.lossWithParcial)}</div>
+      <div class="kpi-sub">por persona del grupo</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Ahorro por persona</div>
+      <div class="kpi-val">${fmt(c.hCollects)}</div>
+      <div class="kpi-sub">gracias al reparto</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Fondo total generado</div>
+      <div class="kpi-val">${fmt(c.fundParcial)}</div>
+      <div class="kpi-sub">${c.nH} huelguistas × ${fmt(c.lossParcial)}</div>
+    </div>
+  `;
+
+  // Gráfica comparativa
+  const maxC = Math.max(c.lossParcial, c.lossWithParcial, c.hCollects, c.smPays);
+  const BAR_MAX_H = 150;
+  const chartBars = [
+    {val:c.lossParcial,     col:'#ff5c5c', label:'Sin reparto',   sub:'huelguista'},
+    {val:c.lossWithParcial, col:'#2ecc71', label:'Con reparto',   sub:'por persona'},
+    {val:c.hCollects,       col:'#f5c518', label:'Ahorro',        sub:'huelguista'},
+    {val:c.smPays,          col:'#4da6ff', label:'SM paga',       sub:'cada uno'},
+  ];
+  document.getElementById('an-chart-compare').innerHTML = `
+    <div style="font-size:11px;color:#6b7a99;margin-bottom:16px">Valores por persona · ${S.hours}h de huelga</div>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+      <tbody>
+        <tr>
+          ${chartBars.map(b => {
+            const h = Math.max(4, Math.round(BAR_MAX_H * b.val / maxC));
+            return '<td style="text-align:center;vertical-align:bottom;padding:0 4px 0">'
+              + '<div style="font-family:Syne,sans-serif;font-size:11px;font-weight:700;color:' + b.col + ';margin-bottom:6px;white-space:nowrap">' + fmt(b.val) + '</div>'
+              + '<div style="height:' + h + 'px;background:' + b.col + ';border-radius:4px 4px 0 0"></div>'
+              + '</td>';
+          }).join('')}
+        </tr>
+        <tr><td colspan="5"><div style="height:2px;background:#2a3450"></div></td></tr>
+        <tr>
+          ${chartBars.map(b =>
+            '<td style="text-align:center;padding:10px 2px 0;vertical-align:top;overflow:hidden">'
+            + '<div style="font-size:10px;font-weight:600;color:#e8eaf0;line-height:1.3;word-break:break-word;hyphens:auto">' + b.label + '</div>'
+            + '<div style="font-size:9px;color:#6b7a99;margin-top:2px">' + b.sub + '</div>'
+            + '</td>'
+          ).join('')}
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:16px;padding:12px 14px;background:#161b27;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;color:#6b7a99">Fondo total entre todos</span>
+      <span style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:#4da6ff;white-space:nowrap">${fmt(c.fundParcial)}</span>
+    </div>
+  `;
+
+  // Desglose del coste
+  const salParcial = c.avgSalary * (S.hours / 8);
+  const compParcial = c.compParcial;
+  const total = salParcial + compParcial;
+  const salPct  = total > 0 ? (salParcial  / total * 100).toFixed(1) : 0;
+  const compPct = total > 0 ? (compParcial / total * 100).toFixed(1) : 0;
+  document.getElementById('an-desglose').innerHTML = `
+    <div style="background:var(--card2);border-radius:10px;padding:18px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">Salario proporcional</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${S.hours}h de ${fmt(c.avgSalary)}/día · ${salPct}% del total</div>
+        </div>
+        <span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--red);white-space:nowrap">${fmt(salParcial)}</span>
+      </div>
+      <div style="height:8px;background:var(--border2);border-radius:4px">
+        <div style="height:8px;width:${salPct}%;background:var(--red);border-radius:4px"></div>
+      </div>
+    </div>
+    <div style="background:var(--card2);border-radius:10px;padding:18px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">Complementos ponderados</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${S.complementos.length} complemento${S.complementos.length!==1?'s':''} · ${compPct}% del total</div>
+        </div>
+        <span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--gold);white-space:nowrap">${fmt(compParcial)}</span>
+      </div>
+      <div style="height:8px;background:var(--border2);border-radius:4px">
+        <div style="height:8px;width:${compPct}%;background:var(--gold);border-radius:4px"></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:var(--card);border:1px solid var(--border2);border-radius:10px">
+      <div>
+        <div style="font-size:13px;color:var(--muted)">Coste total por persona</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Con ${S.hours}h de huelga</div>
+      </div>
+      <span style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--text);white-space:nowrap">${fmt(total)}</span>
+    </div>
+  `;
+
+  // Distribución por convenio + complementos — card per convenio, spacious
+  const convRows = S.convenios.map((cv,i) => {
+    const count  = S.workers.filter(w=>w.conv===cv.id).length;
+    const hCount = S.workers.filter(w=>w.conv===cv.id && w.sit==='H').length;
+    const smCount= S.workers.filter(w=>w.conv===cv.id && w.sit==='SM').length;
+    const pct    = S.workers.length > 0 ? (count/S.workers.length*100).toFixed(0) : 0;
+    const totalComps = S.complementos.reduce((s,cp)=>s+(cp.vals[cv.id]||0),0);
+    const totalDia   = cv.salary + totalComps;
+
+    const compLines = S.complementos.map(cp => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;color:var(--text2)">${cp.name}</span>
+        <div style="display:flex;align-items:baseline;gap:4px">
+<span style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--gold);white-space:nowrap">${fmt(cp.vals[cv.id]??0)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> /día</span></span>
+        </div>
+      </div>`).join('');
+
+    return `
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px">
+
+        <!-- Fila 1: nombre + salario base en una sola línea -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:16px;font-weight:700">${cv.name}</div>
+<span style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--blue);white-space:nowrap">${fmt(cv.salary)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> /día</span></span>
+        </div>
+
+        <!-- Fila 2: personas, huelga, SM en una sola línea -->
+        <div style="display:flex;align-items:center;gap:16px;font-size:12px;color:var(--muted);margin-bottom:12px">
+          <span>${count} persona${count!==1?'s':''} · ${pct}%</span>
+          <span style="color:var(--blue)">🙋 ${hCount} huelga</span>
+          <span style="color:var(--gold)">💼 ${smCount} SM</span>
+        </div>
+
+        <!-- Barra de presencia -->
+        <div style="height:4px;background:var(--border2);border-radius:3px;margin-bottom:16px">
+          <div style="height:4px;width:${pct}%;background:var(--blue);border-radius:3px"></div>
+        </div>
+
+        ${S.complementos.length > 0 ? `
+        <!-- Complementos -->
+        <div style="margin-bottom:4px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Complementos</div>
+          ${compLines}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 4px">
+            <span style="font-size:13px;font-weight:600;color:var(--text2)">Total complementos</span>
+<span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gold);white-space:nowrap">${fmt(totalComps)}<span style="font-size:11px;font-weight:400;color:var(--muted)"> /día</span></span>
+          </div>
+        </div>` : ''}
+
+        <!-- Total día -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card);border-radius:8px;margin-top:8px">
+          <span style="font-size:13px;color:var(--muted)">Coste total por día</span>
+<span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);white-space:nowrap">${fmt(totalDia)}</span>
+        </div>
+
+      </div>`;
+  }).join('');
+  document.getElementById('an-convenios').innerHTML = (S.convenios.length === 0)
+    ? `<p style="color:var(--muted);font-size:13px">No hay convenios configurados.</p>`
+    : convRows;
+
+  // Progreso
+  const smDone = smW.filter(w=>w.paid).length;
+  const hDone  = hW.filter(w=>w.collected).length;
+  // Participación real (SM + NP cuentan como trabajadores ese día)
+  const totalAll   = S.workers.length;
+  const nHuelga    = S.workers.filter(w => w.sit === 'H').length;
+  const nSMexp     = S.workers.filter(w => w.sit === 'SM').length;
+  const nNP        = S.workers.filter(w => w.sit === 'NP').length;
+  const nTrabajan  = nSMexp + nNP;  // SM explícitos + no participan
+  const pctH       = totalAll > 0 ? (nHuelga   / totalAll * 100).toFixed(1) : 0;
+  const pctSM      = totalAll > 0 ? (nTrabajan / totalAll * 100).toFixed(1) : 0;
+  const pctHb      = totalAll > 0 ? nHuelga   / totalAll * 100 : 0;
+  const pctSMb     = totalAll > 0 ? nTrabajan / totalAll * 100 : 0;
+
+  document.getElementById('an-participacion').innerHTML = `
+    <!-- Barra apilada -->
+    <div style="height:20px;border-radius:10px;overflow:hidden;display:flex;margin-bottom:20px">
+      <div style="width:${pctHb}%;background:var(--blue);transition:width .5s"></div>
+      <div style="width:${pctSMb}%;background:var(--gold);transition:width .5s"></div>
+    </div>
+
+    <!-- Fila huelga -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:12px;height:12px;border-radius:3px;background:var(--blue);display:inline-block;flex-shrink:0"></span>
+        <div>
+          <div style="font-size:14px;font-weight:600">En huelga</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${nHuelga} persona${nHuelga!==1?'s':''} · no trabajan</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--blue)">${pctH}%</div>
+      </div>
+    </div>
+
+    <!-- Fila trabajando -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:12px;height:12px;border-radius:3px;background:var(--gold);display:inline-block;flex-shrink:0"></span>
+        <div>
+          <div style="font-size:14px;font-weight:600">Trabajando ese día</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">
+            ${nSMexp} Serv. Mínimos + ${nNP} no participan
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--gold)">${pctSM}%</div>
+      </div>
+    </div>
+
+    <!-- Total -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card2);border-radius:8px;margin-top:12px">
+      <div>
+        <div style="font-size:13px;font-weight:600">Total plantilla</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${nHuelga} huelga + ${nTrabajan} trabajan</div>
+      </div>
+      <span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800">${totalAll}</span>
+    </div>
+  `;
+
+    document.getElementById('an-progress').innerHTML = `
+    <div class="prog-wrap">
+      <div class="prog-label">
+        <span>SM — pagos realizados</span>
+        <span style="color:var(--gold);font-weight:600">${smDone} / ${smW.length}</span>
+      </div>
+      <div class="prog"><div class="prog-fill" style="width:${smW.length>0?smDone/smW.length*100:0}%;background:var(--gold)"></div></div>
+    </div>
+    <div class="prog-wrap" style="margin-top:14px">
+      <div class="prog-label">
+        <span>Huelguistas — cobros realizados</span>
+        <span style="color:var(--green);font-weight:600">${hDone} / ${hW.length}</span>
+      </div>
+      <div class="prog"><div class="prog-fill" style="width:${hW.length>0?hDone/hW.length*100:0}%;background:var(--green)"></div></div>
+    </div>
+    <div style="margin-top:18px;padding:14px;background:var(--card2);border-radius:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Total compañeros</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800">${S.workers.length}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">En huelga</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--blue)">${c.nH}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Servicios Mínimos</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--gold)">${c.nSM}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ── CONFIG ──
+function renderConfig() {
+  // Slider
+  const slider = document.getElementById('hours-slider');
+  slider.value = S.hours;
+  document.getElementById('hours-display').textContent = S.hours + 'h';
+
+  // Convenios
+  const convList = document.getElementById('conv-list');
+  convList.innerHTML = S.convenios.map((cv,i) => `
+    <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-weight:600;font-size:14px">${cv.name}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${S.workers.filter(w=>w.conv===cv.id).length} compañeros</div>
+        </div>
+        <button class="btn btn-red btn-sm" onclick="deleteConv('${cv.id}')">✕ Eliminar</button>
+      </div>
+      <div style="padding:8px 0">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Salario diario</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="number" value="${cv.salary.toFixed(2)}" step="0.01"
+            style="flex:1;min-width:0"
+            onchange="updateConvSalary('${cv.id}', this.value)">
+          <span style="font-size:13px;color:var(--muted);white-space:nowrap;flex-shrink:0">€/día</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // Complementos
+  const compList = document.getElementById('comp-list');
+  compList.innerHTML = S.complementos.map(cp => {
+    const valFields = S.convenios.map(cv => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${cv.name}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="number" value="${(cp.vals[cv.id]||0).toFixed(2)}" step="0.01"
+            style="flex:1;min-width:0"
+            onchange="updateCompVal('${cp.id}','${cv.id}',this.value)">
+          <span style="font-size:13px;color:var(--muted);white-space:nowrap">€/día</span>
+        </div>
+      </div>
+    `).join('');
+    return `
+      <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <strong style="font-size:14px">${cp.name}</strong>
+          <button class="btn btn-red btn-sm" onclick="deleteComp('${cp.id}')">✕ Eliminar</button>
+        </div>
+        ${valFields}
+      </div>`;
+  }).join('');
+
+  // Calc info
+  const c = calc();
+  document.getElementById('calc-info').innerHTML = `
+    <div class="grid3" style="gap:12px">
+      <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Salario medio ponderado</div><div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700">${fmt(c.avgSalary)}<span style="font-size:12px;color:var(--muted)">/día</span></div></div>
+      <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Complementos ponderados (${S.hours}h)</div><div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700">${fmt(c.compParcial)}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Coste total por ${S.hours}h huelga</div><div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--red)">${fmt(c.lossParcial)}</div></div>
+    </div>
+  `;
+}
+
+// ── SIMULATOR ──
+function renderSim() {
+  const d = parseInt(document.getElementById('days-slider').value) || S.simDays;
+  simUpdate(d);
+}
+
+function simUpdate(days) {
+  S.simDays = parseInt(days);
+  document.getElementById('days-display').textContent = days + (days==1?' día':' días');
+  const c = calc();
+  const d = parseInt(days);
+
+  const sinParcial  = c.lossParcial  * d;
+  const conParcial  = c.lossWithParcial * d;
+  const ahorroParcial = (c.lossParcial - c.lossWithParcial) * d;
+  const fondoParcial  = c.fundParcial * d;
+
+  const sinFull   = c.lossFull  * d;
+  const conFull   = c.lossWithFull * d;
+  const ahorroFull = (c.lossFull - c.lossWithFull) * d;
+
+  // Días de resistencia
+  const diasP = c.lossParcial > 0 ? fondoParcial / c.fundParcial : 0;
+  const diasF = c.lossFull    > 0 ? (c.fundFull*d) / c.fundFull   : 0;
+
+  document.getElementById('sim-results').innerHTML = `
+    <div class="sim-card" style="border-top:3px solid var(--blue)">
+      <h4>Huelga Parcial · ${S.hours}h × ${d} día${d>1?'s':''}</h4>
+      <div class="sim-big" style="color:var(--red)">${fmt(sinParcial)}</div>
+      <div class="sim-sub">perdería sin reparto</div>
+      <div class="divider"></div>
+      <div class="sim-big" style="color:var(--green)">${fmt(conParcial)}</div>
+      <div class="sim-sub">pierde con reparto</div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px">
+        <span style="color:var(--muted)">Ahorro total por persona</span>
+        <strong style="color:var(--gold)">${fmt(ahorroParcial)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:8px">
+        <span style="color:var(--muted)">El grupo protege</span>
+        <strong style="color:var(--blue)">${fmt(fondoParcial)}</strong>
+      </div>
+    </div>
+    <div class="sim-card" style="border-top:3px solid var(--red)">
+      <h4>Huelga Completa · 8h × ${d} día${d>1?'s':''}</h4>
+      <div class="sim-big" style="color:var(--red)">${fmt(sinFull)}</div>
+      <div class="sim-sub">perdería sin reparto</div>
+      <div class="divider"></div>
+      <div class="sim-big" style="color:var(--green)">${fmt(conFull)}</div>
+      <div class="sim-sub">pierde con reparto</div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px">
+        <span style="color:var(--muted)">Ahorro total por persona</span>
+        <strong style="color:var(--gold)">${fmt(ahorroFull)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:8px">
+        <span style="color:var(--muted)">El grupo protege</span>
+        <strong style="color:var(--blue)">${fmt(c.fundFull*d)}</strong>
+      </div>
+    </div>
+  `;
+
+  // Chart
+  const maxV = Math.max(sinParcial, sinFull) * 1.15;
+  document.getElementById('sim-chart').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+      <tbody>
+        <tr>
+          ${barGroup(sinParcial,  maxV, 'var(--red)',   'Sin parcial')}
+          ${barGroup(conParcial,  maxV, 'var(--green)', 'Con parcial')}
+          ${barGroup(ahorroParcial, maxV, 'var(--gold)', 'Ahorro parcial')}
+          ${barGroup(sinFull,   maxV, 'var(--red)',   'Sin completa')}
+          ${barGroup(conFull,   maxV, 'var(--green)', 'Con completa')}
+          ${barGroup(ahorroFull,maxV, 'var(--gold)', 'Ahorro completa')}
+        </tr>
+        <tr><td colspan="6"><div style="height:2px;background:#2a3450"></div></td></tr>
+        <tr>
+          ${barLabelCell('Sin<br>('+S.hours+'h)')}
+          ${barLabelCell('Con<br>('+S.hours+'h)')}
+          ${barLabelCell('Ahorro<br>parcial')}
+          ${barLabelCell('Sin<br>(8h)')}
+          ${barLabelCell('Con<br>(8h)')}
+          ${barLabelCell('Ahorro<br>total')}
+        </tr>
+      </tbody>
+    </table>
+  `;
+  saveState();
+}
+
+// ══════════════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════════════
+function inlineUpdateWorker(id, field, value) {
+  const w = S.workers.find(x=>x.id===id);
+  if (!w) return;
+  w[field] = value;
+  if (field === "sit") { w.paid = false; w.collected = false; }
+  saveState(); render();
+}
+
+function toggleStatus(id) {
+  const w = S.workers.find(x=>x.id===id);
+  if (!w) return;
+  if (w.sit==='SM') w.paid = !w.paid;
+  else w.collected = !w.collected;
+  saveState(); render();
+}
+
+function deleteWorker(id) {
+  if (!confirm('¿Eliminar este compañero?')) return;
+  S.workers = S.workers.filter(w=>w.id!==id);
+  saveState(); render();
+}
+
+function editWorker(id) {
+  const w = S.workers.find(x=>x.id===id);
+  if (!w) return;
+  document.getElementById('ew-id').value = w.id;
+  document.getElementById('ew-name').value = w.name;
+  fillConvSelect('ew-conv', w.conv);
+  document.getElementById('ew-sit').value = w.sit;
+  openModal('edit-worker');
+}
+
+function saveWorker() {
+  const id = parseInt(document.getElementById('ew-id').value);
+  const w = S.workers.find(x=>x.id===id);
+  if (!w) return;
+  w.name = document.getElementById('ew-name').value.trim();
+  w.conv = document.getElementById('ew-conv').value;
+  w.sit  = document.getElementById('ew-sit').value;
+  closeModal('edit-worker');
+  saveState(); render();
+}
+
+function addWorker() {
+  const name = document.getElementById('w-name').value.trim();
+  if (!name) { alert('Introduce un nombre'); return; }
+  const conv = document.getElementById('w-conv').value;
+  const sit  = document.getElementById('w-sit').value;
+  const newId = S.workers.length > 0 ? Math.max(...S.workers.map(w=>w.id))+1 : 1;
+  S.workers.push({id:newId, name, conv, sit, paid:false, collected:false});
+  document.getElementById('w-name').value = '';
+  closeModal('add-worker');
+  saveState(); render();
+}
+
+function resetAllStatus() {
+  if (!confirm('¿Resetear todos los estados de pago y cobro?')) return;
+  S.workers.forEach(w=>{ w.paid=false; w.collected=false; });
+  saveState(); render();
+}
+
+function setHours(val) {
+  S.hours = parseFloat(val);
+  document.getElementById('hours-display').textContent = val + 'h';
+  saveState(); render();
+}
+
+function updateConvSalary(id, val) {
+  const cv = S.convenios.find(c=>c.id===id);
+  if (cv) cv.salary = parseFloat(val)||0;
+  saveState(); render();
+}
+
+function deleteConv(id) {
+  if (S.workers.some(w=>w.conv===id)) {
+    alert('No puedes eliminar un convenio que tiene compañeros asignados. Cambia su convenio primero.');
+    return;
+  }
+  S.convenios = S.convenios.filter(c=>c.id!==id);
+  S.complementos.forEach(cp=>{ delete cp.vals[id]; });
+  saveState(); render();
+}
+
+function addConv() {
+  const name   = document.getElementById('cv-name').value.trim();
+  const salary = parseFloat(document.getElementById('cv-salary').value)||0;
+  if (!name) { alert('Introduce un nombre'); return; }
+  const id = name.replace(/\s+/g,'-').toLowerCase();
+  if (S.convenios.find(c=>c.id===id)) { alert('Ya existe ese convenio'); return; }
+  S.convenios.push({id, name, salary});
+  S.complementos.forEach(cp=>{ cp.vals[id]=0; });
+  document.getElementById('cv-name').value='';
+  document.getElementById('cv-salary').value='';
+  closeModal('add-conv');
+  saveState(); render();
+}
+
+function updateCompVal(cpId, convId, val) {
+  const cp = S.complementos.find(c=>c.id===cpId);
+  if (cp) cp.vals[convId] = parseFloat(val)||0;
+  saveState(); render();
+}
+
+function deleteComp(id) {
+  S.complementos = S.complementos.filter(c=>c.id!==id);
+  saveState(); render();
+}
+
+function addComp() {
+  const name = document.getElementById('cp-name').value.trim();
+  if (!name) { alert('Introduce un nombre'); return; }
+  const id = name.replace(/\s+/g,'-').toLowerCase()+'-'+Date.now();
+  const vals = {};
+  S.convenios.forEach(cv=>{
+    const inp = document.getElementById('cpf-'+cv.id);
+    vals[cv.id] = inp ? (parseFloat(inp.value)||0) : 0;
+  });
+  S.complementos.push({id, name, vals});
+  closeModal('add-comp');
+  saveState(); render();
+}
+
+// ══════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════
+function openModal(name) {
+  if (name==='add-worker') fillConvSelect('w-conv');
+  if (name==='add-comp') {
+    document.getElementById('cp-conv-fields').innerHTML =
+      S.convenios.map(cv=>`
+        <div class="field">
+          <label>${cv.name}</label>
+          <input type="number" id="cpf-${cv.id}" placeholder="0.00" step="0.01" style="width:150px">
+        </div>
+      `).join('');
+  }
+  document.getElementById('modal-'+name).classList.add('open');
+}
+
+function closeModal(name) {
+  document.getElementById('modal-'+name).classList.remove('open');
+}
+
+function fillConvSelect(elId, selected) {
+  const el = document.getElementById(elId);
+  el.innerHTML = S.convenios.map(cv=>
+    `<option value="${cv.id}" ${cv.id===selected?'selected':''}>${cv.name}</option>`
+  ).join('');
+}
+
+// Close modal on background click
+document.querySelectorAll('.modal-bg').forEach(mb=>{
+  mb.addEventListener('click', e=>{
+    if(e.target===mb) mb.classList.remove('open');
+  });
+});
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+document.getElementById('hours-slider').value = S.hours;
+document.getElementById('days-slider').value  = S.simDays;
+// render called after login
+
+// ══════════════════════════════════════════════
+// HISTORIAL
+// ══════════════════════════════════════════════
+function addHistorial() {
+  const fecha = document.getElementById('hist-fecha').value;
+  const tipo  = document.getElementById('hist-tipo').value;
+  const nota  = document.getElementById('hist-nota').value.trim();
+  if (!fecha) { alert('Selecciona una fecha'); return; }
+  if (!S.historial) S.historial = [];
+  // Prevent duplicate dates
+  if (S.historial.find(d => d.fecha === fecha)) {
+    alert('Ya existe un registro para esta fecha'); return;
+  }
+  S.historial.push({ id: Date.now(), fecha, tipo, nota });
+  S.historial.sort((a,b) => a.fecha.localeCompare(b.fecha));
+  document.getElementById('hist-nota').value = '';
+  saveState(); renderHistorial();
+}
+
+function deleteHistorial(id) {
+  S.historial = S.historial.filter(d => d.id !== id);
+  saveState(); renderHistorial();
+}
+
+function renderHistorial() {
+  if (!S.historial) S.historial = [];
+  const c = calc();
+  const hist = S.historial;
+
+  // Acumulado
+  let totalParcial = 0, totalCompleta = 0;
+  hist.forEach(d => {
+    if (d.tipo === 'parcial')  totalParcial++;
+    else                        totalCompleta++;
+  });
+  // Huelguista: pierde su salario proporcional del día (lossParcial / lossFull)
+  // SM: contribuye su cuota al fondo (smPays)
+  const c8 = calc(8);
+  const costeParcialH  = c.lossParcial  * totalParcial;
+  const costeCompletaH = c.lossFull     * totalCompleta;
+  const totalCosteH    = costeParcialH + costeCompletaH;
+  const totalCosteSM   = c.smPays * totalParcial + c8.smPays * totalCompleta;
+
+  const acEl = document.getElementById('hist-acumulado');
+  if (hist.length === 0) {
+    acEl.innerHTML = '<p style="color:var(--muted);font-size:13px">Sin días registrados aún.</p>';
+  } else {
+    acEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div style="background:var(--card2);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">🙋 Acumulado huelguista</div>
+          <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--red);white-space:nowrap">${fmt(totalCosteH)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">coste total</div>
+        </div>
+        <div style="background:var(--card2);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">💼 Acumulado SM</div>
+          <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--gold);white-space:nowrap">${fmt(totalCosteSM)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">contribución total</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div style="background:var(--card2);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Total días</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800">${hist.length}</div>
+        </div>
+        <div style="background:var(--card2);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Parciales</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--blue)">${totalParcial}</div>
+        </div>
+        <div style="background:var(--card2);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Completas</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--green)">${totalCompleta}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Lista de días
+  const listaEl = document.getElementById('hist-lista');
+  if (hist.length === 0) {
+    listaEl.innerHTML = '<div class="empty"><div class="ei">📅</div><p>Registra el primer día de huelga.</p></div>';
+    return;
+  }
+
+  const costePorDia = (tipo) => {
+    const cH  = tipo === 'parcial' ? c.lossParcial  : c8.lossFull;
+    const cSM = tipo === 'parcial' ? c.smPays        : c8.smPays;
+    return { cH, cSM };
+  };
+
+  listaEl.innerHTML = [...hist].reverse().map((d,i) => {
+    const { cH, cSM } = costePorDia(d.tipo);
+    const fechaFmt = new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-ES', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+    const badge = d.tipo === 'parcial'
+      ? `<span style="font-size:10px;font-weight:700;background:rgba(77,166,255,.15);color:var(--blue);padding:3px 8px;border-radius:20px">${S.hours}h parcial</span>`
+      : `<span style="font-size:10px;font-weight:700;background:rgba(46,204,113,.15);color:var(--green);padding:3px 8px;border-radius:20px">Jornada completa</span>`;
+    return `
+      <div style="padding:14px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:4px">${fechaFmt}</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              ${badge}
+              ${d.nota ? `<span style="font-size:11px;color:var(--muted)">${d.nota}</span>` : ''}
+            </div>
+          </div>
+          <button class="btn btn-red btn-sm" onclick="deleteHistorial(${d.id})" style="flex-shrink:0;margin-left:8px">✕</button>
+        </div>
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;background:var(--card2);border-radius:6px;padding:8px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">🙋 Huelguista pierde</div>
+            <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--red);white-space:nowrap">${fmt(cH)}</div>
+          </div>
+          <div style="flex:1;background:var(--card2);border-radius:6px;padding:8px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">💼 SM contribuye</div>
+            <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--gold);white-space:nowrap">${fmt(cSM)}</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// APPWRITE CONFIG
+// ══════════════════════════════════════════════════════════════
+const AW_ENDPOINT   = 'https://cloud.appwrite.io/v1'; // hosted at mitoIII.github.io
+const AW_PROJECT    = '69b125880013c4457efc';
+const AW_DB         = '69b12732003cfaf98318';
+const AW_COL        = 'grupos';
+
+const awClient = new Appwrite.Client();
+awClient.setEndpoint(AW_ENDPOINT).setProject(AW_PROJECT);
+const awDB = new Appwrite.Databases(awClient);
+
+window.AW_DOC_ID = null;   // current group document ID
+window.AW_IS_ADMIN = false;
+
+// ── Appwrite helpers ───────────────────────────────────────────
+async function awListGrupos() {
+  const res = await awDB.listDocuments(AW_DB, AW_COL, [
+    Appwrite.Query.orderDesc("$createdAt"),
+    Appwrite.Query.limit(50)
+  ]);
+  return res.documents;
+}
+
+async function awCrearGrupo(nombre, pin, datos) {
+  return await awDB.createDocument(AW_DB, AW_COL, Appwrite.ID.unique(), { nombre, pin, datos });
+}
+
+async function awSaveData(datosJSON) {
+  if (!window.AW_DOC_ID) return;
+  await awDB.updateDocument(AW_DB, AW_COL, window.AW_DOC_ID, { datos: datosJSON });
+}
+
+async function awGetGrupo(id) {
+  return await awDB.getDocument(AW_DB, AW_COL, id);
+}
+
+// ── Polling para sincronización en tiempo real ─────────────────
+let awPollInterval = null;
+function awStartPolling() {
+  if (awPollInterval) clearInterval(awPollInterval);
+  awPollInterval = setInterval(async () => {
+    if (!window.AW_DOC_ID) return;
+    try {
+      const doc = await awGetGrupo(window.AW_DOC_ID);
+      if (doc.datos) {
+        const remoto = JSON.parse(doc.datos);
+        const local  = JSON.stringify(S);
+        if (JSON.stringify(remoto) !== local) {
+          S = remoto;
+          localStorage.setItem('reparto-v2', doc.datos);
+          render();
+          // Show subtle sync indicator
+          const ind = document.getElementById('sync-indicator');
+          if (ind) { ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',1500); }
+        }
+      }
+    } catch(e) { console.warn('Poll error:', e); }
+  }, 8000); // every 8 seconds
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOGIN SCREEN LOGIC
+// ══════════════════════════════════════════════════════════════
+let lsGrupos = [];
+let lsGrupoSeleccionado = null;
+
+async function lsInit() {
+  const statusEl = document.getElementById('ls-status');
+  try {
+    lsGrupos = await awListGrupos();
+    statusEl.textContent = lsGrupos.length === 0 ? 'Crea el primer centro de trabajo.' : '';
+    lsRenderGrupos();
+  } catch(e) {
+    console.warn('Appwrite error:', e);
+    statusEl.innerHTML = '<span style="color:var(--red)">⚠ Sin conexión con el servidor. Comprueba internet.</span>';
+    // Show lista vacía — don't auto-enter
+    lsGrupos = [];
+    lsRenderGrupos();
+  }
+}
+
+function lsRenderGrupos() {
+  const el = document.getElementById('ls-lista');
+  if (lsGrupos.length === 0) {
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px 0">Crea el primer centro de trabajo</div>';
+    return;
+  }
+  el.innerHTML = lsGrupos.map(g => `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px">${g.nombre}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Centro de trabajo</div>
+      </div>
+      <button class="btn btn-primary" style="padding:8px 18px" onclick="lsSeleccionar('${g.$id}','${g.nombre}')">Entrar →</button>
+    </div>
+  `).join('');
+}
+
+function lsSeleccionar(id, nombre) {
+  lsGrupoSeleccionado = { id, nombre };
+  document.getElementById('pin-modal-nombre').textContent = nombre;
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-error').style.display = 'none';
+  const modal = document.getElementById('pin-modal');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('pin-input').focus(), 100);
+}
+
+function pinCerrar() {
+  document.getElementById('pin-modal').style.display = 'none';
+  lsGrupoSeleccionado = null;
+}
+
+async function pinEntrar() {
+  const pinIntroducido = document.getElementById('pin-input').value.trim();
+  const errEl = document.getElementById('pin-error');
+  if (!pinIntroducido) return;
+
+  try {
+    const doc = await awGetGrupo(lsGrupoSeleccionado.id);
+    if (pinIntroducido !== doc.pin) {
+      errEl.style.display = 'block';
+      document.getElementById('pin-input').value = '';
+      return;
+    }
+    errEl.style.display = 'none';
+    window.AW_DOC_ID = doc.$id;
+    window.AW_IS_ADMIN = true; // PIN correcto = admin (misma contraseña por ahora)
+
+    // Load state from Appwrite data
+    S = loadState(doc.datos || null);
+    if (!S.historial) S.historial = [];
+
+    lsEntrar(doc.nombre);
+  } catch(e) {
+    errEl.textContent = 'Error de conexión';
+    errEl.style.display = 'block';
+  }
+}
+
+function lsEntrar(nombre) {
+  document.getElementById('pin-modal').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'flex';
+  document.getElementById('sidebar-grupo-nombre').textContent = nombre;
+  render();
+  go('resumen');
+  awStartPolling();
+}
+
+function lsEntrarLocal() {
+  // Fallback: enter without Appwrite using localStorage
+  S = loadState(null);
+  if (!S.historial) S.historial = [];
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'flex';
+  document.getElementById('sidebar-grupo-nombre').textContent = 'Local';
+  render();
+  go('resumen');
+}
+
+function cerrarSesion() {
+  if (awPollInterval) clearInterval(awPollInterval);
+  window.AW_DOC_ID = null;
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  lsGrupoSeleccionado = null;
+  lsInit();
+}
+
+function lsToggleCrear() {
+  const f = document.getElementById('ls-form-crear');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if (f.style.display === 'block') document.getElementById('ls-nombre').focus();
+}
+
+async function lsCrearGrupo() {
+  const nombre = document.getElementById('ls-nombre').value.trim();
+  const pin    = document.getElementById('ls-pin-admin').value.trim();
+  const errEl  = document.getElementById('ls-crear-error');
+
+  if (!nombre) { errEl.textContent='Escribe el nombre del centro'; errEl.style.display='block'; return; }
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent='El PIN debe ser exactamente 4 dígitos'; errEl.style.display='block'; return; }
+
+  errEl.style.display = 'none';
+
+  // New group starts empty (no Vilanova data)
+  const estadoVacio = JSON.stringify({
+    hours: 4, simDays: 2,
+    workers: [], convenios: [], complementos: [], historial: []
+  });
+
+  try {
+    const doc = await awCrearGrupo(nombre, pin, estadoVacio);
+    lsGrupos.unshift(doc);
+    lsRenderGrupos();
+    lsToggleCrear();
+    document.getElementById('ls-nombre').value = '';
+    document.getElementById('ls-pin-admin').value = '';
+    // Auto-enter the new group
+    window.AW_DOC_ID = doc.$id;
+    S = loadState(estadoVacio);
+    if (!S.historial) S.historial = [];
+    lsEntrar(nombre);
+  } catch(e) {
+    errEl.textContent = 'Error al crear: ' + (e.message || e);
+    errEl.style.display = 'block';
+  }
+}
+
+// Add sync indicator to logo area
+document.addEventListener('DOMContentLoaded', () => {
+  const logo = document.querySelector('.logo');
+  if (logo) {
+    const ind = document.createElement('div');
+    ind.id = 'sync-indicator';
+    ind.style.cssText = 'font-size:10px;color:var(--green);opacity:0;transition:opacity .5s;margin-top:4px';
+    ind.textContent = '↻ sincronizado';
+    logo.appendChild(ind);
+  }
+  lsInit();
+});
+
+// ── Register Service Worker (PWA) ─────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/reparto-solidario/sw.js')
+      .then(r => console.log('SW registered'))
+      .catch(e => console.log('SW error:', e));
+  });
+}
+
+</script>
+</body>
+</html>
