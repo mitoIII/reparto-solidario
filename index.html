@@ -564,7 +564,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <div style="font-size:36px;margin-bottom:10px">👋</div>
     <div style="font-size:17px;font-weight:700;margin-bottom:6px">¡Bienvenido!</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:20px">¿Cómo te llamas? Así tus compañeros sabrán quién eres.</div>
-    <input id="nombre-input" type="text" placeholder="Tu nombre completo" style="margin-bottom:16px">
+    <input id="nombre-input" type="text" placeholder="Tu nombre completo" style="margin-bottom:12px" oninput="const e=document.getElementById('nombre-modal-error');if(e)e.style.display='none'">
+    <div id="nombre-modal-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px;text-align:left"></div>
     <button class="btn btn-primary" style="width:100%" onclick="nombreConfirmar()">Entrar ✊</button>
   </div>
 </div>
@@ -1044,7 +1045,8 @@ async function renderWorkers() {
           ${(() => {
             if (!window.AW_DOC_ID) return '';
             const miembros = window._miembrosCache || [];
-            const m = miembros.find(x => x.nombre && w.name && x.nombre.toLowerCase() === w.name.toLowerCase());
+            const normName = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
+            const m = miembros.find(x => normName(x.nombre) === normName(w.name));
             if (!m) return '<span style="color:var(--muted);font-size:11px">—</span>';
             const esAdmin = m.esAdmin;
             const rolBadge = esAdmin
@@ -2045,6 +2047,16 @@ let _docDatos = null;
 async function nombreConfirmar() {
   const nombre = document.getElementById('nombre-input').value.trim();
   if (!nombre) { document.getElementById('nombre-input').focus(); return; }
+
+  // Check for duplicate name
+  const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
+  const yaUsado = _docMiembros.some(m => norm(m.nombre) === norm(nombre));
+  if (yaUsado) {
+    const errEl = document.getElementById('nombre-modal-error');
+    if (errEl) { errEl.style.display = 'block'; errEl.textContent = '⚠ Ese nombre ya está en uso. Elige otro o contacta al admin.'; }
+    return;
+  }
+
   window.AW_USER_NAME = nombre;
 
   // Add to members list
