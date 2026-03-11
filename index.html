@@ -1048,12 +1048,12 @@ async function renderWorkers() {
             if (!m) return '<span style="color:var(--muted);font-size:11px">—</span>';
             const esAdmin = m.esAdmin;
             const rolBadge = esAdmin
-              ? '<span style="color:var(--gold);font-size:12px;font-weight:700">👑</span>'
-              : '<span style="color:#4da6ff;font-size:12px">👁</span>';
-            const rolBtn = window.AW_IS_ADMIN && m.nombre !== window.AW_USER_NAME
-              ? `<button onclick="toggleAdminMiembroByName('${w.name}')" style="background:none;border:none;font-size:10px;color:var(--muted);cursor:pointer;padding:2px 4px;border-radius:4px" title="${esAdmin?'Quitar admin':'Hacer admin'}">${esAdmin?'→👁':'→👑'}</button>`
+              ? '<span style="color:var(--gold);font-size:14px">👑</span>'
+              : '<span style="color:#4da6ff;font-size:14px">👁</span>';
+            const lapiz = window.AW_IS_ADMIN && m.nombre !== window.AW_USER_NAME
+              ? `<button onclick="toggleAdminMiembroByName('${w.name}')" style="background:none;border:none;font-size:13px;color:var(--muted);cursor:pointer;padding:2px 3px;border-radius:4px;margin-left:2px;opacity:0.6" title="${esAdmin?'Quitar admin':'Hacer admin'}">✏️</button>`
               : '';
-            return rolBadge + rolBtn;
+            return rolBadge + lapiz;
           })()}
         </td>
         <td style="text-align:right">
