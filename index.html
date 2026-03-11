@@ -250,7 +250,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
           <div style="font-size:12px;color:var(--muted);margin-bottom:6px">✅ Grupo creado. Tu código secreto es:</div>
           <div id="ls-codigo-generado" style="font-size:28px;font-weight:800;color:var(--gold);letter-spacing:3px"></div>
           <div style="font-size:11px;color:var(--muted);margin-top:6px">Comparte este código con tus compañeros</div>
-          <button class="btn btn-primary" style="margin-top:14px;width:100%" onclick="lsEntrarNuevo()">Entrar →</button>
+          <button class="btn btn-primary" style="margin-top:14px;width:100%" id="btn-entrar-nuevo">Entrar →</button>
         </div>
         <div id="ls-crear-form">
           <div style="margin-bottom:12px">
@@ -1988,8 +1988,14 @@ async function lsCrearGrupo() {
 }
 
 function lsEntrarNuevo() {
-  document.getElementById('nombre-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('nombre-input').focus(), 100);
+  const m = document.getElementById('nombre-modal');
+  if (m) {
+    m.style.display = 'flex';
+    setTimeout(() => {
+      const inp = document.getElementById('nombre-input');
+      if (inp) inp.focus();
+    }, 150);
+  }
 }
 
 // ── ONBOARDING ─────────────────────────────────────────────────
@@ -2039,12 +2045,19 @@ document.addEventListener('DOMContentLoaded', () => {
     ind.textContent = '↻ sincronizado';
     logo.appendChild(ind);
   }
+  // Entrar nuevo group button
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'btn-entrar-nuevo') lsEntrarNuevo();
+  });
   // Enter key for code search
   const inp = document.getElementById('ls-codigo-buscar');
   if (inp) inp.addEventListener('keydown', e => { if (e.key==='Enter') lsBuscarGrupo(); });
   // Enter key for PIN
   const pinInp = document.getElementById('pin-input');
   if (pinInp) pinInp.addEventListener('keydown', e => { if (e.key==='Enter') pinEntrar(); });
+  // Enter key for nombre
+  const nomInp = document.getElementById('nombre-input');
+  if (nomInp) nomInp.addEventListener('keydown', e => { if (e.key==='Enter') nombreConfirmar(); });
 });
 
 // ── Register Service Worker (PWA) ─────────────────────────────
