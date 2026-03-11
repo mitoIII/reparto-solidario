@@ -2043,6 +2043,13 @@ async function nombreConfirmar() {
 }
 
 function lsEntrar(nombre) {
+  // Save session for auto-login on reload
+  localStorage.setItem('rs-session', JSON.stringify({
+    docId: window.AW_DOC_ID,
+    nombre: nombre,
+    esAdmin: window.AW_IS_ADMIN,
+    userName: window.AW_USER_NAME || null
+  }));
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'flex';
   document.getElementById('sidebar-grupo-nombre').textContent = nombre;
@@ -2065,6 +2072,7 @@ function applyRoleUI() {
 
 function cerrarSesion() {
   if (awPollInterval) clearInterval(awPollInterval);
+  localStorage.removeItem('rs-session');
   window.AW_DOC_ID = null;
   window.AW_IS_ADMIN = false;
   window.AW_USER_NAME = null;
@@ -2157,7 +2165,7 @@ function showOnboarding() {
 }
 
 // Add sync indicator to logo area
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const logo = document.querySelector('.logo');
   if (logo) {
     const ind = document.createElement('div');
@@ -2179,6 +2187,30 @@ document.addEventListener('DOMContentLoaded', () => {
   // Enter key for nombre
   const nomInp = document.getElementById('nombre-input');
   if (nomInp) nomInp.addEventListener('keydown', e => { if (e.key==='Enter') nombreConfirmar(); });
+
+  // ── Auto-login si hay sesión guardada ──────────────────────────
+  const sesionGuardada = localStorage.getItem('rs-session');
+  if (sesionGuardada) {
+    try {
+      const ses = JSON.parse(sesionGuardada);
+      const doc = await awGetGrupo(ses.docId);
+      window.AW_DOC_ID = doc.$id;
+      window.AW_IS_ADMIN = ses.esAdmin;
+      window.AW_USER_NAME = ses.userName;
+      S = loadState(doc.datos || null);
+      if (!S.historial) S.historial = [];
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('main-app').style.display = 'flex';
+      document.getElementById('sidebar-grupo-nombre').textContent = ses.nombre;
+      applyRoleUI();
+      render();
+      go('resumen');
+      awStartPolling();
+    } catch(e) {
+      // Session expired or error — go to login
+      localStorage.removeItem('rs-session');
+    }
+  }
 });
 
 // ── Register Service Worker (PWA) ─────────────────────────────
