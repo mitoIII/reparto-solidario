@@ -327,7 +327,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <!-- DOS COLUMNAS: SM pagan / Huelguistas cobran -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
       <div class="card" style="margin-bottom:0">
-        <div class="card-title" style="color:var(--gold)">📤 SM deben pagar</div>
+        <div class="card-title" style="color:var(--gold)">📤 Trabajan — deben pagar</div>
         <div id="res-sm-pend"></div>
       </div>
       <div class="card" style="margin-bottom:0">
@@ -577,8 +577,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       <div class="field">
         <label>Situación</label>
         <select id="w-sit">
+          <option value="SA">Sin asignar</option>
           <option value="H">Hizo huelga</option>
-          <option value="SM">Servicios Mínimos (trabajó)</option>
+          <option value="Trabaja">Trabaja ese día</option>
           <option value="NP">No participa</option>
         </select>
       </div>
@@ -608,7 +609,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
         <label>Situación</label>
         <select id="ew-sit">
           <option value="H">Hizo huelga</option>
-          <option value="SM">Servicios Mínimos</option>
+          <option value="Trabaja">Trabaja</option>
           <option value="NP">No participa</option>
         </select>
       </div>
@@ -666,11 +667,11 @@ const DEFAULTS = {
   hours: 4,
   simDays: 2,
   workers: [
-    {id:1,  name:"Manel Jerez",    conv:"Irvia G5", sit:"SM", paid:true,  collected:false},
-    {id:2,  name:"Oriol Sibecas",  conv:"Irvia G6", sit:"SM", paid:true,  collected:false},
-    {id:3,  name:"Juan Sanchez",   conv:"Irvia G5", sit:"SM", paid:false, collected:false},
-    {id:4,  name:"Oscar Quesada",  conv:"Irvia G6", sit:"SM", paid:false, collected:false},
-    {id:5,  name:"Jesus Martin",   conv:"Irvia G6", sit:"SM", paid:false, collected:false},
+    {id:1,  name:"Manel Jerez",    conv:"Irvia G5", sit:"Trabaja", paid:true,  collected:false},
+    {id:2,  name:"Oriol Sibecas",  conv:"Irvia G6", sit:"Trabaja", paid:true,  collected:false},
+    {id:3,  name:"Juan Sanchez",   conv:"Irvia G5", sit:"Trabaja", paid:false, collected:false},
+    {id:4,  name:"Oscar Quesada",  conv:"Irvia G6", sit:"Trabaja", paid:false, collected:false},
+    {id:5,  name:"Jesus Martin",   conv:"Irvia G6", sit:"Trabaja", paid:false, collected:false},
     {id:6,  name:"Alex Morda",     conv:"Irvia G6", sit:"H",  paid:false, collected:true },
     {id:7,  name:"Farid",          conv:"Irvia G5", sit:"H",  paid:false, collected:true },
     {id:8,  name:"David Sanchez",  conv:"Irvia G5", sit:"H",  paid:false, collected:false},
@@ -720,7 +721,7 @@ function calc(hours) {
   const workers = S.workers;
   const convs = S.convenios;
   const comps = S.complementos;
-  const active = workers.filter(w => w.sit !== 'NP');
+  const active = workers.filter(w => w.sit !== 'NP' && w.sit !== 'SA');
   const total = active.length;
   const huelga = workers.filter(w => w.sit === 'H');
   const sm = workers.filter(w => w.sit === 'SM');
@@ -833,7 +834,7 @@ function renderResumen() {
 
   // Subtitle
   document.getElementById('res-subtitle').textContent =
-    `${S.workers.length} compañeros · ${S.hours}h de huelga · ${c.nH} en huelga · ${c.nSM} en SM`;
+    `${S.workers.length} compañeros · ${S.hours}h de huelga · ${c.nH} en huelga · ${c.nSM} trabajan`;
 
   // KPIs
   document.getElementById('res-kpis').innerHTML = `
@@ -879,7 +880,7 @@ function renderResumen() {
       <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--green),var(--blue))"></div>
       <div style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px">💵 Dinero en mano ahora mismo</div>
       <div style="font-family:'DM Sans',sans-serif;font-size:52px;font-weight:800;color:${cajaReal>=0?'var(--green)':'var(--red)'};line-height:1">${fmt(cajaReal)}</div>
-      <div style="font-size:13px;color:var(--muted);margin-top:8px">Cobrado de SM (${fmt(cajaEnMano)}) menos entregado a huelguistas (${fmt(cajaEntregada)})</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px">Cobrado de los que trabajan (${fmt(cajaEnMano)}) menos entregado a huelguistas (${fmt(cajaEntregada)})</div>
 
       <!-- 3 bloques simétricos -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-top:20px;padding-top:18px;border-top:1px solid var(--border)">
@@ -913,7 +914,7 @@ function renderResumen() {
     </div>`;
 
   document.getElementById('res-sm-pend').innerHTML = smWorkers.length === 0
-    ? `<p style="color:var(--muted);font-size:13px">No hay SM.</p>`
+    ? `<p style="color:var(--muted);font-size:13px">No hay trabajadores.</p>`
     : smWorkers.map(w => ROW(
         w.paid ? 'var(--green)' : 'var(--red)',
         w.name,
@@ -1003,7 +1004,7 @@ function renderWorkers() {
     const convLabel = (S.convenios.find(cv=>cv.id===w.conv)||{name:w.conv}).name;
     const sitOptions = `
       <option value="H"  ${w.sit==='H' ?'selected':''}>Huelga</option>
-      <option value="SM" ${w.sit==='SM'?'selected':''}>Serv. Mínimos</option>
+      <option value="Trabaja" ${w.sit==='SM'?'selected':''}>Serv. Mínimos</option>
       <option value="NP" ${w.sit==='NP'?'selected':''}>No participa</option>`;
     return `
       <tr>
@@ -1192,7 +1193,7 @@ function renderAnalisis() {
         <div style="display:flex;align-items:center;gap:16px;font-size:12px;color:var(--muted);margin-bottom:12px">
           <span>${count} persona${count!==1?'s':''} · ${pct}%</span>
           <span style="color:var(--blue)">🙋 ${hCount} huelga</span>
-          <span style="color:var(--gold)">💼 ${smCount} SM</span>
+          <span style="color:var(--gold)">💼 ${smCount} trabajan</span>
         </div>
 
         <!-- Barra de presencia -->
@@ -1309,7 +1310,7 @@ function renderAnalisis() {
         <div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:800;color:var(--blue)">${c.nH}</div>
       </div>
       <div>
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Servicios Mínimos</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Trabaja</div>
         <div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:800;color:var(--gold)">${c.nSM}</div>
       </div>
     </div>
@@ -1693,7 +1694,7 @@ function renderHistorial() {
           <div style="font-size:11px;color:var(--muted);margin-top:4px">coste total</div>
         </div>
         <div style="background:var(--card2);border-radius:10px;padding:16px;text-align:center">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">💼 Acumulado SM</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">💼 Acumulado trabajadores</div>
           <div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:800;color:var(--gold);white-space:nowrap">${fmt(totalCosteSM)}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:4px">contribución total</div>
         </div>
@@ -1752,7 +1753,7 @@ function renderHistorial() {
             <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--red);white-space:nowrap">${fmt(cH)}</div>
           </div>
           <div style="flex:1;background:var(--card2);border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">💼 SM contribuye</div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">💼 Trabajador contribuye</div>
             <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--gold);white-space:nowrap">${fmt(cSM)}</div>
           </div>
         </div>
@@ -1949,6 +1950,20 @@ async function nombreConfirmar() {
   document.getElementById('nombre-modal').style.display = 'none';
   S = loadState(_docDatos || null);
   if (!S.historial) S.historial = [];
+
+  // Add as worker with situacion "SA" (Sin Asignar) if not already in list
+  const yaExiste = S.workers.find(w => w.name.toLowerCase() === nombre.toLowerCase());
+  if (!yaExiste) {
+    const nuevoWorker = {
+      id: Date.now(),
+      name: nombre,
+      conv: S.convenios.length > 0 ? S.convenios[0].id : null,
+      sit: 'SA'
+    };
+    S.workers.push(nuevoWorker);
+    saveState();
+  }
+
   lsEntrar(_nuevoNombreGrupo);
 }
 
@@ -2033,8 +2048,8 @@ function lsEntrarNuevo() {
 function showOnboarding() {
   const pasos = [
     { icon:'⚙️', title:'Configura las horas', desc:'Ve a Configuración y ajusta las horas de huelga (parcial o completa) y añade los convenios de tu centro.' },
-    { icon:'👥', title:'Añade a los compañeros', desc:'En Compañeros añade a cada trabajador con su nombre, convenio y situación: Huelga, SM o No Participa.' },
-    { icon:'📊', title:'Revisa la contabilidad', desc:'En Resumen verás cuánto aporta cada SM y cuánto cobra cada huelguista. Márcalos como pagados o cobrados.' },
+    { icon:'👥', title:'Añade a los compañeros', desc:'En Compañeros añade a cada trabajador con su nombre, convenio y situación: Huelga, Trabaja o No Participa.' },
+    { icon:'📊', title:'Revisa la contabilidad', desc:'En Resumen verás cuánto aporta cada trabajador y cuánto cobra cada huelguista. Márcalos como pagados o cobrados.' },
     { icon:'📅', title:'Registra los días', desc:'En Historial añade cada día de huelga convocado y consulta el acumulado económico real.' },
     { icon:'🔮', title:'Usa el Simulador', desc:'¿Cuántos días más podemos aguantar? El Simulador te lo calcula con y sin reparto solidario.' },
   ];
