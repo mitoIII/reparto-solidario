@@ -1045,15 +1045,17 @@ async function renderWorkers() {
           ${(() => {
             if (!window.AW_DOC_ID) return '';
             const miembros = window._miembrosCache || [];
-            const normName = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
-            const m = miembros.find(x => normName(x.nombre) === normName(w.name));
-            if (!m) return '<span style="color:var(--muted);font-size:11px">—</span>';
-            const esAdmin = m.esAdmin;
+            const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
+            const m = miembros.find(x => norm(x.nombre) === norm(w.name));
+            // Badge based on miembros if found, otherwise default lector
+            const esAdmin = m ? m.esAdmin : false;
             const rolBadge = esAdmin
               ? '<span style="color:var(--gold);font-size:14px">👑</span>'
               : '<span style="color:#4da6ff;font-size:14px">👁</span>';
-            const lapiz = window.AW_IS_ADMIN && m.nombre !== window.AW_USER_NAME
-              ? `<button onclick="toggleAdminMiembroByName('${w.name}')" style="background:none;border:none;font-size:13px;color:var(--muted);cursor:pointer;padding:2px 3px;border-radius:4px;margin-left:2px;opacity:0.6" title="${esAdmin?'Quitar admin':'Hacer admin'}">✏️</button>`
+            // Show pencil for all workers that are not the current user, if current user is admin
+            const esSelf = norm(w.name) === norm(window.AW_USER_NAME || '');
+            const lapiz = window.AW_IS_ADMIN && !esSelf
+              ? `<button onclick="toggleAdminMiembroByName('${w.name}')" style="background:none;border:none;font-size:13px;color:var(--muted);cursor:pointer;padding:2px 3px;border-radius:4px;margin-left:2px;opacity:0.7" title="${esAdmin?'Quitar admin':'Hacer admin'}">✏️</button>`
               : '';
             return rolBadge + lapiz;
           })()}
