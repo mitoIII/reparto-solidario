@@ -366,6 +366,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     </div>
   </div>
 
+  <!-- ══ MIEMBROS ══ -->
+  <div class="section" id="s-miembros">
+    <div class="ph">
+      <h2>Miembros</h2>
+      <p>Personas que han accedido al grupo y sus roles</p>
+    </div>
+    <div id="miembros-table-wrap"></div>
+  </div>
+
   <!-- ══ CONFIGURACIÓN ══ -->
   <div class="section" id="s-config">
     <div class="ph">
@@ -1030,6 +1039,71 @@ function renderWorkers() {
   }).join('');
 }
 
+
+// ── MIEMBROS ──────────────────────────────────────────────────
+async function renderMiembros() {
+  const el = document.getElementById('miembros-table-wrap');
+  if (!el) return;
+
+  // Load current miembros from Appwrite
+  let miembros = [];
+  try {
+    const doc = await awGetGrupo(window.AW_DOC_ID);
+    miembros = JSON.parse(doc.miembros || '[]');
+  } catch(e) { miembros = []; }
+
+  if (miembros.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="ei">🧑‍🤝‍🧑</div><p>Aún no hay miembros registrados.</p></div>';
+    return;
+  }
+
+  const isAdmin = window.AW_IS_ADMIN;
+  el.innerHTML = `
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:40%">Nombre</th>
+          <th style="width:30%">Rol</th>
+          <th style="width:30%">${isAdmin ? 'Acción' : ''}</th>
+        </tr></thead>
+        <tbody>
+          ${miembros.map((m, i) => `
+            <tr>
+              <td>
+                <strong>${m.nombre}</strong>
+                ${m.nombre === window.AW_USER_NAME ? '<span style="font-size:10px;color:var(--muted);margin-left:6px">(tú)</span>' : ''}
+              </td>
+              <td>
+                ${m.esAdmin
+                  ? '<span style="color:var(--gold);font-weight:700;font-size:13px">👑 Admin</span>'
+                  : '<span style="color:#4da6ff;font-weight:600;font-size:13px">👁 Lector</span>'}
+              </td>
+              <td style="text-align:right">
+                ${isAdmin && m.nombre !== window.AW_USER_NAME
+                  ? `<button class="btn btn-ghost btn-sm" onclick="toggleAdminMiembro(${i})" style="font-size:11px;padding:5px 8px">
+                      ${m.esAdmin ? '→ Lector' : '→ Admin'}
+                    </button>`
+                  : ''}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  // Store miembros for toggle
+  window._miembrosCache = miembros;
+}
+
+async function toggleAdminMiembro(idx) {
+  let miembros = window._miembrosCache || [];
+  miembros[idx].esAdmin = !miembros[idx].esAdmin;
+  try {
+    await awDB.updateDocument(AW_DB, AW_COL, window.AW_DOC_ID, { miembros: JSON.stringify(miembros) });
+    window._miembrosCache = miembros;
+    renderMiembros();
+  } catch(e) { alert('Error al actualizar el rol'); }
+}
 
 // ── ANÁLISIS ──
 function svgBar(val, max, col, label, sublabel) {
