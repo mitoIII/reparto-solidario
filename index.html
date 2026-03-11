@@ -990,7 +990,7 @@ function renderWorkers() {
     const amtCol = isH ? 'pos' : 'neg';
     const chip = isH
       ? `<span class="chip h">Huelga</span>`
-      : `<span class="chip sm">SM</span>`;
+      : w.sit === "SA" ? `<span class="chip" style="background:rgba(150,150,150,.15);color:#888">Sin asignar</span>` : `<span class="chip sm">Trabaja</span>`;
     const status = done
       ? `<span class="chip ok">✔ Completado</span>`
       : `<span class="chip pend">${isH ? '⏳ Pte. cobrar' : '⏳ Pte. pagar'}</span>`;
@@ -1003,8 +1003,9 @@ function renderWorkers() {
     ).join('');
     const convLabel = (S.convenios.find(cv=>cv.id===w.conv)||{name:w.conv}).name;
     const sitOptions = `
+      <option value="SA" ${w.sit==='SA'?'selected':''}>Sin asignar</option>
       <option value="H"  ${w.sit==='H' ?'selected':''}>Huelga</option>
-      <option value="Trabaja" ${w.sit==='SM'?'selected':''}>Serv. Mínimos</option>
+      <option value="SM" ${w.sit==='SM'?'selected':''}>Trabaja</option>
       <option value="NP" ${w.sit==='NP'?'selected':''}>No participa</option>`;
     return `
       <tr>
@@ -1016,7 +1017,7 @@ function renderWorkers() {
           </select>
         </td>
         <td style="overflow:visible">
-          <select style="width:100%;min-width:110px;background:var(--card2);border:1px solid var(--border2);border-radius:5px;padding:6px 4px;font-size:12px;cursor:pointer;color:${isNP?'var(--muted)':isH?'var(--blue)':'var(--gold)'};font-weight:600"
+          <select style="width:100%;min-width:110px;background:var(--card2);border:1px solid var(--border2);border-radius:5px;padding:6px 4px;font-size:12px;cursor:pointer;color:${w.sit==='SA'?'#888':isNP?'var(--muted)':isH?'var(--blue)':'var(--gold)'};font-weight:600"
             onchange="inlineUpdateWorker(${w.id},'sit',this.value)">
             ${sitOptions}
           </select>
