@@ -532,6 +532,33 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </main>
 </div>
 
+
+<!-- ══ MODAL PIN ══ -->
+<div id="pin-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:100%;max-width:320px;text-align:center;overflow:hidden">
+    <div style="font-size:32px;margin-bottom:8px">🔐</div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:4px" id="pin-modal-nombre"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Introduce el PIN del grupo</div>
+    <input id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="••••" style="text-align:center;font-size:24px;letter-spacing:8px;margin-bottom:16px;width:100%;box-sizing:border-box">
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="pinCerrar()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" onclick="pinEntrar()">Entrar</button>
+    </div>
+    <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none">PIN incorrecto</div>
+  </div>
+</div>
+
+<!-- ══ MODAL NOMBRE ══ -->
+<div id="nombre-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:100%;max-width:340px;text-align:center">
+    <div style="font-size:36px;margin-bottom:10px">👋</div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:6px">¡Bienvenido!</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">¿Cómo te llamas? Así tus compañeros sabrán quién eres.</div>
+    <input id="nombre-input" type="text" placeholder="Tu nombre completo" style="margin-bottom:16px">
+    <button class="btn btn-primary" style="width:100%" onclick="nombreConfirmar()">Entrar ✊</button>
+  </div>
+</div>
+
 <!-- ══ MODALS ══ -->
 
 <!-- Add worker -->
