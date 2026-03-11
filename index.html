@@ -984,7 +984,14 @@ function barLabelCell(label) {
 }
 
 // ── WORKERS ──
-function renderWorkers() {
+async function renderWorkers() {
+  // Refresh miembros cache
+  if (window.AW_DOC_ID) {
+    try {
+      const doc = await awGetGrupo(window.AW_DOC_ID);
+      window._miembrosCache = JSON.parse(doc.miembros || '[]');
+    } catch(e) {}
+  }
   const c = calc();
   const tbody = document.getElementById('workers-table');
   if (S.workers.length === 0) {
@@ -2050,6 +2057,7 @@ async function nombreConfirmar() {
   // Update Appwrite miembros
   try {
     await awDB.updateDocument(AW_DB, AW_COL, _nuevoDocId, { miembros: JSON.stringify(_docMiembros) });
+    window._miembrosCache = _docMiembros;
   } catch(e) { console.warn('Could not save member:', e); }
 
   document.getElementById('nombre-modal').style.display = 'none';
