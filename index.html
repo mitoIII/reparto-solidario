@@ -220,58 +220,60 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 
 <!-- ══ PANTALLA DE GRUPOS ══ -->
 <div id="login-screen" style="display:flex;position:fixed;inset:0;z-index:9999;background:var(--bg);flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 20px;overflow-y:auto">
-  <div style="width:100%;max-width:440px">
+  <div style="width:100%;max-width:420px">
 
     <div style="text-align:center;margin-bottom:32px">
-      <div style="font-size:40px;margin-bottom:8px">✊</div>
-      <div style="font-family:'DM Sans',sans-serif;font-size:24px;font-weight:800;color:var(--gold)">Reparto Solidario</div>
-      <div style="font-size:13px;color:var(--muted);margin-top:4px">Selecciona tu centro de trabajo</div>
+      <div style="font-size:48px;margin-bottom:8px">✊</div>
+      <div style="font-size:26px;font-weight:800;color:var(--gold)">Reparto Solidario</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Huelga · Calculadora colectiva</div>
     </div>
 
-    <!-- Estado de conexión -->
-    <div id="ls-status" style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:16px">Conectando...</div>
-
-    <!-- Lista grupos -->
-    <div id="ls-lista" style="margin-bottom:16px"></div>
-
-    <!-- Botón crear nuevo grupo -->
-    <button id="ls-btn-nuevo" class="btn btn-primary" style="width:100%;margin-bottom:16px" onclick="lsToggleCrear()">+ Nuevo centro de trabajo</button>
-
-    <!-- Formulario crear grupo (oculto por defecto) -->
-    <div id="ls-form-crear" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px">
-      <div style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px">Nuevo centro</div>
-      <div style="margin-bottom:12px">
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Nombre del centro</label>
-        <input id="ls-nombre" type="text" placeholder="Ej: Vilanova, Taller Nord...">
+    <!-- VISTA: Buscar por código -->
+    <div id="ls-vista-buscar">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">🔍 Entrar a un grupo</div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Código de grupo</label>
+        <input id="ls-codigo-buscar" type="text" placeholder="Ej: VIL-4829" style="text-transform:uppercase;letter-spacing:2px;font-weight:700">
+        <button class="btn btn-primary" style="width:100%;margin-top:10px" onclick="lsBuscarGrupo()">Buscar grupo →</button>
+        <div id="ls-buscar-resultado" style="margin-top:12px"></div>
+        <div id="ls-status" style="text-align:center;font-size:12px;color:var(--muted);margin-top:6px"></div>
       </div>
-      <div style="margin-bottom:16px">
-        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">PIN admin (4 dígitos)</label>
-        <input id="ls-pin-admin" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+      <div style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:10px">¿No tienes grupo aún?</div>
+      <button class="btn btn-ghost" style="width:100%" onclick="lsShowCrear()">+ Crear nuevo grupo</button>
+    </div>
+
+    <!-- VISTA: Crear grupo -->
+    <div id="ls-vista-crear" style="display:none">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:16px">🏭 Nuevo centro de trabajo</div>
+        <div id="ls-crear-codigo-result" style="display:none;background:rgba(245,197,24,.08);border:1px solid var(--gold);border-radius:8px;padding:16px;margin-bottom:16px;text-align:center">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">✅ Grupo creado. Tu código secreto es:</div>
+          <div id="ls-codigo-generado" style="font-size:28px;font-weight:800;color:var(--gold);letter-spacing:3px"></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">Comparte este código con tus compañeros</div>
+          <button class="btn btn-primary" style="margin-top:14px;width:100%" onclick="lsEntrarNuevo()">Entrar →</button>
+        </div>
+        <div id="ls-crear-form">
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Nombre del centro</label>
+            <input id="ls-nombre" type="text" placeholder="Nombre de tu centro de trabajo">
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">PIN de acceso (4 dígitos)</label>
+            <input id="ls-pin-admin" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Todos los miembros usarán este PIN</div>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-ghost" style="flex:1" onclick="lsShowBuscar()">Cancelar</button>
+            <button class="btn btn-primary" style="flex:1" onclick="lsCrearGrupo()">Crear</button>
+          </div>
+        </div>
+        <div id="ls-crear-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none"></div>
       </div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-ghost" style="flex:1" onclick="lsToggleCrear()">Cancelar</button>
-        <button class="btn btn-primary" style="flex:1" onclick="lsCrearGrupo()">Crear</button>
-      </div>
-      <div id="ls-crear-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none"></div>
     </div>
 
   </div>
 </div>
 
-<!-- ══ MODAL PIN ══ -->
-<div id="pin-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:100%;max-width:320px;text-align:center;overflow:hidden">
-    <div style="font-size:32px;margin-bottom:8px">🔐</div>
-    <div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;margin-bottom:4px" id="pin-modal-nombre"></div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Introduce el PIN para acceder</div>
-    <input id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="••••" style="text-align:center;font-size:24px;letter-spacing:8px;margin-bottom:16px;width:100%;box-sizing:border-box">
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-ghost" style="flex:1" onclick="pinCerrar()">Cancelar</button>
-      <button class="btn btn-primary" style="flex:1" onclick="pinEntrar()">Entrar</button>
-    </div>
-    <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none">PIN incorrecto</div>
-  </div>
-</div>
 
 <div class="app" style="display:none" id="main-app">
 
@@ -1795,39 +1797,41 @@ function awStartPolling() {
 // ══════════════════════════════════════════════════════════════
 // LOGIN SCREEN LOGIC
 // ══════════════════════════════════════════════════════════════
-let lsGrupos = [];
 let lsGrupoSeleccionado = null;
+let _nuevoDocId = null;
+let _nuevoNombreGrupo = null;
 
-async function lsInit() {
-  const statusEl = document.getElementById('ls-status');
-  try {
-    lsGrupos = await awListGrupos();
-    statusEl.textContent = lsGrupos.length === 0 ? 'Crea el primer centro de trabajo.' : '';
-    lsRenderGrupos();
-  } catch(e) {
-    console.warn('Appwrite error:', e);
-    statusEl.innerHTML = '<span style="color:var(--red)">⚠ Sin conexión con el servidor. Comprueba internet.</span>';
-    // Show lista vacía — don't auto-enter
-    lsGrupos = [];
-    lsRenderGrupos();
-  }
+function generarCodigo(nombre) {
+  const prefix = nombre.trim().toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,3).padEnd(3,'X');
+  return prefix + '-' + Math.floor(1000 + Math.random()*9000);
 }
 
-function lsRenderGrupos() {
-  const el = document.getElementById('ls-lista');
-  if (lsGrupos.length === 0) {
-    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px 0">Crea el primer centro de trabajo</div>';
-    return;
-  }
-  el.innerHTML = lsGrupos.map(g => `
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px">${g.nombre}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">Centro de trabajo</div>
-      </div>
-      <button class="btn btn-primary" style="padding:8px 18px" onclick="lsSeleccionar('${g.$id}','${g.nombre}')">Entrar →</button>
-    </div>
-  `).join('');
+function lsUserKey(docId) { return 'rsuser-' + docId; }
+
+function lsShowBuscar() {
+  document.getElementById('ls-vista-buscar').style.display = 'block';
+  document.getElementById('ls-vista-crear').style.display = 'none';
+}
+function lsShowCrear() {
+  document.getElementById('ls-vista-buscar').style.display = 'none';
+  document.getElementById('ls-vista-crear').style.display = 'block';
+  setTimeout(() => document.getElementById('ls-nombre').focus(), 100);
+}
+
+async function lsBuscarGrupo() {
+  const codigo  = document.getElementById('ls-codigo-buscar').value.trim().toUpperCase();
+  const resEl   = document.getElementById('ls-buscar-resultado');
+  if (!codigo) { resEl.innerHTML = '<span style="color:var(--red);font-size:12px">Escribe el código del grupo</span>'; return; }
+  resEl.innerHTML = '<span style="color:var(--muted);font-size:12px">Buscando...</span>';
+  try {
+    const res = await awDB.listDocuments(AW_DB, AW_COL, [Appwrite.Query.equal('codigo',[codigo]), Appwrite.Query.limit(1)]);
+    if (!res.documents.length) { resEl.innerHTML = '<span style="color:var(--red);font-size:12px">❌ Código no encontrado</span>'; return; }
+    const g = res.documents[0];
+    resEl.innerHTML = `<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+      <div><div style="font-weight:700;font-size:15px">${g.nombre}</div><div style="font-size:11px;color:var(--muted)">Código: ${g.codigo}</div></div>
+      <button class="btn btn-primary" style="padding:8px 16px" onclick="lsSeleccionar('${g.$id}','${g.nombre}')">Entrar →</button>
+    </div>`;
+  } catch(e) { resEl.innerHTML = '<span style="color:var(--red);font-size:12px">⚠ Error de conexión</span>'; }
 }
 
 function lsSeleccionar(id, nombre) {
@@ -1835,8 +1839,7 @@ function lsSeleccionar(id, nombre) {
   document.getElementById('pin-modal-nombre').textContent = nombre;
   document.getElementById('pin-input').value = '';
   document.getElementById('pin-error').style.display = 'none';
-  const modal = document.getElementById('pin-modal');
-  modal.style.display = 'flex';
+  document.getElementById('pin-modal').style.display = 'flex';
   setTimeout(() => document.getElementById('pin-input').focus(), 100);
 }
 
@@ -1853,60 +1856,106 @@ async function pinEntrar() {
   try {
     const doc = await awGetGrupo(lsGrupoSeleccionado.id);
     if (pinIntroducido !== doc.pin) {
+      errEl.textContent = 'PIN incorrecto';
       errEl.style.display = 'block';
       document.getElementById('pin-input').value = '';
       return;
     }
     errEl.style.display = 'none';
+    document.getElementById('pin-modal').style.display = 'none';
     window.AW_DOC_ID = doc.$id;
-    window.AW_IS_ADMIN = true; // PIN correcto = admin (misma contraseña por ahora)
 
-    // Load state from Appwrite data
-    S = loadState(doc.datos || null);
-    if (!S.historial) S.historial = [];
+    // Check if admin (creator stored in miembros)
+    let miembros = [];
+    try { miembros = JSON.parse(doc.miembros || '[]'); } catch(e) { miembros = []; }
+    const adminEntry = miembros.find(m => m.esAdmin);
 
-    lsEntrar(doc.nombre);
+    // Check if this device already has a user for this group
+    const userGuardado = localStorage.getItem(lsUserKey(doc.$id));
+    if (userGuardado) {
+      const u = JSON.parse(userGuardado);
+      window.AW_IS_ADMIN = u.esAdmin || false;
+      window.AW_USER_NAME = u.nombre;
+      S = loadState(doc.datos || null);
+      if (!S.historial) S.historial = [];
+      lsEntrar(doc.nombre);
+    } else {
+      // Primera vez — preguntar nombre
+      window.AW_IS_ADMIN = !adminEntry; // Si no hay admin aún, este es el admin (creador)
+      _nuevoDocId = doc.$id;
+      _nuevoNombreGrupo = doc.nombre;
+      _docMiembros = miembros;
+      _docDatos = doc.datos;
+      document.getElementById('nombre-modal').style.display = 'flex';
+      setTimeout(() => document.getElementById('nombre-input').focus(), 100);
+    }
   } catch(e) {
     errEl.textContent = 'Error de conexión';
     errEl.style.display = 'block';
   }
 }
 
+let _docMiembros = [];
+let _docDatos = null;
+
+async function nombreConfirmar() {
+  const nombre = document.getElementById('nombre-input').value.trim();
+  if (!nombre) { document.getElementById('nombre-input').focus(); return; }
+  window.AW_USER_NAME = nombre;
+
+  // Add to members list
+  const nuevoMiembro = { nombre, esAdmin: window.AW_IS_ADMIN, fecha: new Date().toISOString() };
+  _docMiembros.push(nuevoMiembro);
+
+  // Save user to localStorage
+  localStorage.setItem(lsUserKey(_nuevoDocId), JSON.stringify({ nombre, esAdmin: window.AW_IS_ADMIN }));
+
+  // Update Appwrite miembros
+  try {
+    await awDB.updateDocument(AW_DB, AW_COL, _nuevoDocId, { miembros: JSON.stringify(_docMiembros) });
+  } catch(e) { console.warn('Could not save member:', e); }
+
+  document.getElementById('nombre-modal').style.display = 'none';
+  S = loadState(_docDatos || null);
+  if (!S.historial) S.historial = [];
+  lsEntrar(_nuevoNombreGrupo);
+}
+
 function lsEntrar(nombre) {
-  document.getElementById('pin-modal').style.display = 'none';
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'flex';
   document.getElementById('sidebar-grupo-nombre').textContent = nombre;
+  applyRoleUI();
   render();
+  if (window.AW_IS_ADMIN && S.workers.length === 0 && !localStorage.getItem('onboarding-done')) {
+    setTimeout(() => showOnboarding(), 600);
+  }
   go('resumen');
   awStartPolling();
 }
 
-function lsEntrarLocal() {
-  // Fallback: enter without Appwrite using localStorage
-  S = loadState(null);
-  if (!S.historial) S.historial = [];
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('main-app').style.display = 'flex';
-  document.getElementById('sidebar-grupo-nombre').textContent = 'Local';
-  render();
-  go('resumen');
+function applyRoleUI() {
+  const badge = document.getElementById('rol-badge');
+  if (badge) {
+    badge.textContent = window.AW_IS_ADMIN ? '👑 Admin' : '👁 Lector';
+    badge.style.color = window.AW_IS_ADMIN ? 'var(--gold)' : '#4da6ff';
+  }
 }
 
 function cerrarSesion() {
   if (awPollInterval) clearInterval(awPollInterval);
   window.AW_DOC_ID = null;
+  window.AW_IS_ADMIN = false;
+  window.AW_USER_NAME = null;
   document.getElementById('main-app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   lsGrupoSeleccionado = null;
-  lsInit();
+  lsShowBuscar();
+  document.getElementById('ls-codigo-buscar').value = '';
+  document.getElementById('ls-buscar-resultado').innerHTML = '';
 }
 
-function lsToggleCrear() {
-  const f = document.getElementById('ls-form-crear');
-  f.style.display = f.style.display === 'none' ? 'block' : 'none';
-  if (f.style.display === 'block') document.getElementById('ls-nombre').focus();
-}
+async function lsInit() { /* groups found by code */ }
 
 async function lsCrearGrupo() {
   const nombre = document.getElementById('ls-nombre').value.trim();
@@ -1915,31 +1964,69 @@ async function lsCrearGrupo() {
 
   if (!nombre) { errEl.textContent='Escribe el nombre del centro'; errEl.style.display='block'; return; }
   if (!/^\d{4}$/.test(pin)) { errEl.textContent='El PIN debe ser exactamente 4 dígitos'; errEl.style.display='block'; return; }
-
   errEl.style.display = 'none';
 
-  // New group starts empty (no Vilanova data)
-  const estadoVacio = JSON.stringify({
-    hours: 4, simDays: 2,
-    workers: [], convenios: [], complementos: [], historial: []
-  });
+  const codigo = generarCodigo(nombre);
+  const estadoVacio = JSON.stringify({ hours:4, simDays:2, workers:[], convenios:[], complementos:[], historial:[] });
 
   try {
-    const doc = await awCrearGrupo(nombre, pin, estadoVacio);
-    lsGrupos.unshift(doc);
-    lsRenderGrupos();
-    lsToggleCrear();
-    document.getElementById('ls-nombre').value = '';
-    document.getElementById('ls-pin-admin').value = '';
-    // Auto-enter the new group
+    const doc = await awDB.createDocument(AW_DB, AW_COL, Appwrite.ID.unique(), { nombre, pin, codigo, datos: estadoVacio, miembros: '[]' });
+    // Show code
+    document.getElementById('ls-crear-form').style.display = 'none';
+    document.getElementById('ls-codigo-generado').textContent = codigo;
+    document.getElementById('ls-crear-codigo-result').style.display = 'block';
+    _nuevoDocId = doc.$id;
+    _nuevoNombreGrupo = nombre;
+    _docMiembros = [];
+    _docDatos = estadoVacio;
     window.AW_DOC_ID = doc.$id;
-    S = loadState(estadoVacio);
-    if (!S.historial) S.historial = [];
-    lsEntrar(nombre);
+    window.AW_IS_ADMIN = true;
   } catch(e) {
     errEl.textContent = 'Error al crear: ' + (e.message || e);
     errEl.style.display = 'block';
   }
+}
+
+function lsEntrarNuevo() {
+  document.getElementById('nombre-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('nombre-input').focus(), 100);
+}
+
+// ── ONBOARDING ─────────────────────────────────────────────────
+function showOnboarding() {
+  const pasos = [
+    { icon:'⚙️', title:'Configura las horas', desc:'Ve a Configuración y ajusta las horas de huelga (parcial o completa) y añade los convenios de tu centro.' },
+    { icon:'👥', title:'Añade a los compañeros', desc:'En Compañeros añade a cada trabajador con su nombre, convenio y situación: Huelga, SM o No Participa.' },
+    { icon:'📊', title:'Revisa la contabilidad', desc:'En Resumen verás cuánto aporta cada SM y cuánto cobra cada huelguista. Márcalos como pagados o cobrados.' },
+    { icon:'📅', title:'Registra los días', desc:'En Historial añade cada día de huelga convocado y consulta el acumulado económico real.' },
+    { icon:'🔮', title:'Usa el Simulador', desc:'¿Cuántos días más podemos aguantar? El Simulador te lo calcula con y sin reparto solidario.' },
+  ];
+  let paso = 0;
+  const overlay = document.createElement('div');
+  overlay.id = 'onboarding-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:20px';
+  function renderPaso() {
+    const p = pasos[paso]; const last = paso === pasos.length-1;
+    overlay.innerHTML = `<div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:32px;max-width:380px;width:100%;text-align:center">
+      <div style="font-size:52px;margin-bottom:10px">${p.icon}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:.08em">PASO ${paso+1} DE ${pasos.length}</div>
+      <div style="font-size:20px;font-weight:800;margin-bottom:12px;color:var(--gold)">${p.title}</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px">${p.desc}</div>
+      <div style="display:flex;gap:6px;justify-content:center;margin-bottom:20px">
+        ${pasos.map((_,i)=>`<div style="width:8px;height:8px;border-radius:50%;background:${i===paso?'var(--gold)':'var(--border)'};transition:background .3s"></div>`).join('')}
+      </div>
+      <div style="display:flex;gap:10px">
+        ${paso>0?'<button class="btn btn-ghost" style="flex:1" onclick="onbPrev()">← Anterior</button>':''}
+        <button class="btn btn-primary" style="flex:1" onclick="${last?'onbFin()':'onbNext()'}"> ${last?'¡Empezar! ✊':'Siguiente →'}</button>
+      </div>
+      <button onclick="onbFin()" style="margin-top:14px;background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer">Saltar tutorial</button>
+    </div>`;
+  }
+  window.onbNext = () => { paso++; renderPaso(); };
+  window.onbPrev = () => { paso--; renderPaso(); };
+  window.onbFin  = () => { overlay.remove(); localStorage.setItem('onboarding-done','1'); go('config'); };
+  document.body.appendChild(overlay);
+  renderPaso();
 }
 
 // Add sync indicator to logo area
@@ -1952,7 +2039,12 @@ document.addEventListener('DOMContentLoaded', () => {
     ind.textContent = '↻ sincronizado';
     logo.appendChild(ind);
   }
-  lsInit();
+  // Enter key for code search
+  const inp = document.getElementById('ls-codigo-buscar');
+  if (inp) inp.addEventListener('keydown', e => { if (e.key==='Enter') lsBuscarGrupo(); });
+  // Enter key for PIN
+  const pinInp = document.getElementById('pin-input');
+  if (pinInp) pinInp.addEventListener('keydown', e => { if (e.key==='Enter') pinEntrar(); });
 });
 
 // ── Register Service Worker (PWA) ─────────────────────────────
