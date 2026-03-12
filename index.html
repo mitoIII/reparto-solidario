@@ -709,11 +709,31 @@ let S = {}; // loaded after login
 
 function loadState(datosJSON) {
   try {
-    if (datosJSON) return JSON.parse(datosJSON);
+    if (datosJSON) return migrateState(JSON.parse(datosJSON));
     const raw = localStorage.getItem('reparto-v2');
-    if (raw) return JSON.parse(raw);
+    if (raw) return migrateState(JSON.parse(raw));
   } catch(e){}
   return JSON.parse(JSON.stringify(DEFAULTS));
+}
+
+// Migrar estado antiguo: añadir convenios/complementos por defecto si están vacíos
+function migrateState(s) {
+  if (!s) return s;
+  const defConvenios = [
+    {id:"Irvia G6", name:"Irvia Grupo 6", salary: 2002.25/30},
+    {id:"Irvia G5", name:"Irvia Grupo 5", salary: 2063.39/30},
+    {id:"Alstom",   name:"Alstom",        salary: 68.78}
+  ];
+  const defComplementos = [
+    {id:"noct", name:"Nocturnidad", vals:{"Irvia G6":19.76,"Irvia G5":19.76,"Alstom":39.28}},
+    {id:"grt",  name:"GRT",         vals:{"Irvia G6":3.15, "Irvia G5":3.15, "Alstom":10.76}}
+  ];
+  if (!s.convenios || s.convenios.length === 0) s.convenios = defConvenios;
+  if (!s.complementos || s.complementos.length === 0) s.complementos = defComplementos;
+  if (!s.historial) s.historial = [];
+  // Normalizar sit: 'SM' → 'Trabaja' para consistencia
+  if (s.workers) s.workers.forEach(w => { if (w.sit === 'SM') w.sit = 'Trabaja'; });
+  return s;
 }
 
 function saveState() {
@@ -2252,7 +2272,22 @@ async function lsCrearGrupo() {
   errEl.style.display = 'none';
 
   const codigo = generarCodigo(nombre);
-  const estadoVacio = JSON.stringify({ hours:4, simDays:2, workers:[], convenios:[], complementos:[], historial:[] });
+  // Inicializar con convenios y complementos por defecto para que el cálculo funcione
+  const estadoVacio = JSON.stringify({
+    hours: 4,
+    simDays: 2,
+    workers: [],
+    convenios: [
+      {id:"Irvia G6", name:"Irvia Grupo 6", salary: 2002.25/30},
+      {id:"Irvia G5", name:"Irvia Grupo 5", salary: 2063.39/30},
+      {id:"Alstom",   name:"Alstom",        salary: 68.78}
+    ],
+    complementos: [
+      {id:"noct", name:"Nocturnidad", vals:{"Irvia G6":19.76,"Irvia G5":19.76,"Alstom":39.28}},
+      {id:"grt",  name:"GRT",         vals:{"Irvia G6":3.15, "Irvia G5":3.15, "Alstom":10.76}}
+    ],
+    historial: []
+  });
 
   try {
     const doc = await awDB.createDocument(AW_DB, AW_COL, Appwrite.ID.unique(), { nombre, pin, codigo, datos: estadoVacio, miembros: '[]' });
@@ -2367,7 +2402,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(function() {
         awGetGrupo(ses.docId).then(function(doc) {
           if (doc.datos) {
-            try { S = JSON.parse(doc.datos); render(); } catch(e) {}
+            try { S = migrateState(JSON.parse(doc.datos)); render(); } catch(e) {}
           }
           try { window._miembrosCache = JSON.parse(doc.miembros || '[]'); } catch(e) {}
         }).catch(function(e) { console.warn('BG sync error:', e); });
