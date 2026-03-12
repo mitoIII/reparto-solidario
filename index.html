@@ -2147,9 +2147,15 @@ async function nombreConfirmar() {
       return;
     }
 
-    // 3. Colisión con S.workers (exact o ≤ 2) → avisar que ese nombre ya existe en el grupo
-    const workers = (S && S.workers) ? S.workers : [];
-    const workerMatch = workers.find(w =>
+    // 3. Colisión de nombre con workers del grupo — leer directo de _docDatos
+    // (S todavía no está cargado con los datos de este grupo en este punto)
+    let grupoWorkers = [];
+    try {
+      const datosGrupo = _docDatos ? JSON.parse(_docDatos) : null;
+      grupoWorkers = (datosGrupo && datosGrupo.workers) ? datosGrupo.workers : [];
+    } catch(e) { grupoWorkers = []; }
+
+    const workerMatch = grupoWorkers.find(w =>
       norm(w.name) === nombreNorm || levenshtein(norm(w.name), nombreNorm) <= 2
     );
     if (workerMatch) {
