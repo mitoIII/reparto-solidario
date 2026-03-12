@@ -638,11 +638,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <h3>Añadir convenio</h3>
     <div class="field">
       <label>Nombre del convenio</label>
-      <input type="text" id="cv-name" placeholder="Ej: Irvia Grupo 6">
+      <input type="text" id="cv-name" placeholder="Ej: Convenio General, Grupo A...">
     </div>
     <div class="field">
       <label>Salario diario bruto (€)</label>
-      <input type="number" id="cv-salary" placeholder="67.91" step="0.01">
+      <input type="number" id="cv-salary" placeholder="Ej: 65.00" step="0.01">
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('add-conv')">Cancelar</button>
@@ -2070,29 +2070,55 @@ async function pinEntrar() {
 let _docMiembros = [];
 let _docDatos = null;
 
+// ── Levenshtein distance ─────────────────────────────────────
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_,i) => Array.from({length: n+1}, (_,j) => i===0?j:j===0?i:0));
+  for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
+    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j-1],dp[i-1][j],dp[i][j-1]);
+  return dp[m][n];
+}
+
 async function nombreConfirmar() {
   const nombre = document.getElementById('nombre-input').value.trim();
   if (!nombre) { document.getElementById('nombre-input').focus(); return; }
 
   const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
-  const miembroExistente = _docMiembros.find(m => norm(m.nombre) === norm(nombre));
+  const nombreNorm = norm(nombre);
 
-  if (miembroExistente) {
-    // Name already exists — ask if it's them
-    const errEl = document.getElementById('nombre-modal-error');
-    if (errEl) {
-      errEl.style.display = 'block';
-      errEl.innerHTML = `⚠ Ese nombre ya está registrado. ¿Eres tú?
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-primary btn-sm" style="flex:1" onclick="reclamarIdentidad('${miembroExistente.nombre.replace(/'/g,"\\'")}')">Sí, soy yo</button>
-          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="document.getElementById('nombre-modal-error').style.display='none';document.getElementById('nombre-input').value='';document.getElementById('nombre-input').focus()">No, cambiar nombre</button>
-        </div>`;
-    }
+  // Exact match
+  const exacto = _docMiembros.find(m => norm(m.nombre) === nombreNorm);
+  if (exacto) {
+    mostrarSugerencia(exacto, nombre);
+    return;
+  }
+
+  // Similar match (Levenshtein ≤ 2)
+  const similar = _docMiembros.find(m => levenshtein(norm(m.nombre), nombreNorm) <= 2);
+  if (similar) {
+    mostrarSugerencia(similar, nombre);
     return;
   }
 
   await _guardarNuevoMiembro(nombre);
 }
+
+function mostrarSugerencia(miembro, nombreEscrito) {
+  const errEl = document.getElementById('nombre-modal-error');
+  if (!errEl) return;
+  errEl.style.display = 'block';
+  errEl.innerHTML = '<div style="margin-bottom:8px">¿Quisiste decir <strong style="color:var(--gold)">' + miembro.nombre + '</strong>?</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button class="btn btn-primary btn-sm" style="flex:1" id="btn-si-soy-yo">Sí, soy yo ✓</button>'
+    + '<button class="btn btn-ghost btn-sm" style="flex:1" id="btn-no-soy-otro">No, soy otro</button>'
+    + '</div>';
+  document.getElementById('btn-si-soy-yo').onclick = function() { reclamarIdentidad(miembro.nombre); };
+  document.getElementById('btn-no-soy-otro').onclick = function() {
+    errEl.style.display = 'none';
+    _guardarNuevoMiembro(nombreEscrito);
+  };
+}
+
 
 async function reclamarIdentidad(nombre) {
   // User claims to be an existing member — restore their session
