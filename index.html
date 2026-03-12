@@ -201,6 +201,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   nav a span:not(.ni){font-size:10px;display:block}
   nav a .ni{font-size:18px}
   .badge{display:none}
+  #nav-salir-mobile{display:flex!important;border-bottom-color:transparent!important;background:none!important}
   main{padding:16px 14px;max-width:100%}
   .kpis{grid-template-columns:1fr 1fr}
   .grid2,.grid3,.sim-grid{grid-template-columns:1fr}
@@ -306,6 +307,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     </a>
     <a onclick="go('historial')" data-tab="historial">
       <span class="ni">📅</span><span>Historial</span>
+    </a>
+    <a onclick="cerrarSesion()" id="nav-salir-mobile" style="display:none;color:var(--red);border-left:none">
+      <span class="ni">✕</span><span>Salir</span>
     </a>
   </nav>
 </aside>
@@ -2144,6 +2148,21 @@ async function nombreConfirmar() {
       return;
     }
 
+    // Comprobar también contra S.workers — puede que el compañero exista en la lista
+    // pero nunca haya hecho login (no está en _docMiembros)
+    const workerExacto = S.workers.find(w => norm(w.name) === nombreNorm);
+    if (workerExacto) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
+      mostrarSugerencia({ nombre: workerExacto.name, esAdmin: false }, nombre);
+      return;
+    }
+    const workerSimilar = S.workers.find(w => levenshtein(norm(w.name), nombreNorm) <= 2);
+    if (workerSimilar) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
+      mostrarSugerencia({ nombre: workerSimilar.name, esAdmin: false }, nombre);
+      return;
+    }
+
     await _guardarNuevoMiembro(nombre);
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
@@ -2177,6 +2196,15 @@ async function reclamarIdentidad(nombre) {
 
   window.AW_USER_NAME = nombre;
   window.AW_IS_ADMIN = esAdmin;
+
+  // Si no estaba en _docMiembros (venía solo de S.workers), añadirlo ahora
+  if (!m) {
+    const nuevoMiembro = { nombre, esAdmin: false, fecha: new Date().toISOString() };
+    _docMiembros.push(nuevoMiembro);
+    try {
+      await awDB.updateDocument(AW_DB, AW_COL, _nuevoDocId, { miembros: JSON.stringify(_docMiembros) });
+    } catch(e) { console.warn('Could not register member:', e); }
+  }
 
   // Save to localStorage so next time auto-login works
   localStorage.setItem(lsUserKey(_nuevoDocId), JSON.stringify({ nombre, esAdmin }));
