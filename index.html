@@ -899,7 +899,7 @@ function renderResumen(c) {
 
   const cajaEnMano    = smPaid.length * c.smPays;
   const cajaEntregada = hCollected.length * c.hCollects;
-  const cajaReal      = cajaEnMano - cajaEntregada;
+  const cajaReal      = Math.round((cajaEnMano - cajaEntregada) * 100) / 100;
   const pendCobrar    = smPending.length * c.smPays;
   const pendEntregar  = hPending.length * c.hCollects;
 
@@ -908,7 +908,7 @@ function renderResumen(c) {
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px 28px 22px;margin-bottom:18px;position:relative;overflow:hidden">
       <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--green),var(--blue))"></div>
       <div style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px">💵 Dinero en mano ahora mismo</div>
-      <div style="font-family:'DM Sans',sans-serif;font-size:52px;font-weight:800;color:${cajaReal>=0?'var(--green)':'var(--red)'};line-height:1">${fmt(cajaReal)}</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:52px;font-weight:800;color:${cajaReal >= 0?'var(--green)':'var(--red)'};line-height:1">${fmt(Math.abs(cajaReal) < 0.01 ? 0 : cajaReal)}</div>
       <div style="font-size:13px;color:var(--muted);margin-top:8px">Cobrado de los que trabajan (${fmt(cajaEnMano)}) menos entregado a huelguistas (${fmt(cajaEntregada)})</div>
 
       <!-- 3 bloques simétricos -->
