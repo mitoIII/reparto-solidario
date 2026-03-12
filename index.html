@@ -727,61 +727,82 @@ function saveState() {
 // ══════════════════════════════════════════════
 // CALCULATIONS
 // ══════════════════════════════════════════════
+function isActive(w) { return w.sit === 'H' || w.sit === 'SM' || w.sit === 'Trabaja'; }
+function isTrabaja(w) { return w.sit === 'SM' || w.sit === 'Trabaja'; }
+
 function calc(hours) {
   const h = hours ?? S.hours;
   const workers = S.workers;
-  const convs = S.convenios;
-  const comps = S.complementos;
-  const isSM = w => w.sit === 'SM' || w.sit === 'Trabaja';
-  const active = workers.filter(w => w.sit !== 'NP' && w.sit !== 'SA');
-  const total = active.length;
-  const huelga = workers.filter(w => w.sit === 'H');
-  const sm = workers.filter(isSM);
+  const convs   = S.convenios;
+  const comps   = S.complementos;
 
-  // Weighted average salary (only active participants)
-  let salarySum = 0;
+  const active  = workers.filter(isActive);
+  const huelga  = workers.filter(w => w.sit === 'H');
+  const sm      = workers.filter(isTrabaja);
+
+  // O17 - total activos (H + SM)
+  const O17 = active.length;
+  // O18 - total huelguistas
+  const O18 = huelga.length;
+
+  // O14: salario promedio ponderado - suma salarios activos / O17
+  let salSum = 0;
   active.forEach(w => {
     const cv = convs.find(c => c.id === w.conv);
-    salarySum += cv ? cv.salary : 0;
+    salSum += cv ? cv.salary : 0;
   });
-  const avgSalary = total > 0 ? salarySum / total : 0;
+  const O14 = O17 > 0 ? salSum / O17 : 0;
 
-  // Weighted complementos — only active (H or SM), same as Excel O14 formula
-  let compTotal = 0;
-  comps.forEach(cp => {
-    let wSum = 0;
-    active.forEach(w => {
-      const v = cp.vals[w.conv] ?? 0;
-      wSum += v;
+  // O15: complementos ponderados — igual que Excel O23..On
+  // Fórmula Excel: ROUND((val_irvia*(nIrvia) + val_alstom*(nAlstom)) / total, 2)
+  // Generalizado: agrupar convenios, ponderar el valor de cada grupo, ROUND a 2 decimales
+  let O15 = 0;
+  if (O17 > 0) {
+    comps.forEach(cp => {
+      // Para cada complemento, calcular el valor ponderado por grupos de convenio
+      // Agrupamos todos los convenios y sus counts entre activos
+      const convCounts = {};
+      active.forEach(w => { convCounts[w.conv] = (convCounts[w.conv] || 0) + 1; });
+      let cpSum = 0;
+      Object.entries(convCounts).forEach(([convId, cnt]) => {
+        cpSum += (cp.vals[convId] ?? 0) * cnt;
+      });
+      // ROUND a 2 decimales igual que el Excel
+      O15 += Math.round(cpSum / O17 * 100) / 100;
     });
-    const avg = total > 0 ? wSum / total : 0;
-    compTotal += avg;
-  });
-  const compParcial = compTotal * (h / 8);
+  }
 
-  // Per-person loss without reparto
-  const lossFull  = avgSalary + compTotal;          // 8h
-  const lossParcial = (avgSalary * h/8) + compParcial; // partial
+  // O16: precio huelga completa (8h) = O14 + O15
+  const O16 = O14 + O15;
 
-  // Total fund
-  const fundParcial = lossParcial * huelga.length;
-  const fundFull    = lossFull    * huelga.length;
+  // O19: fondo total huelga completa = O18 * O16
+  const O19 = O18 * O16;
 
-  // Loss with reparto
-  const lossWithParcial = fundParcial / total;
-  const lossWithFull    = fundFull    / total;
+  // O20: cuota por persona completa = O19 / O17
+  const O20 = O17 > 0 ? O19 / O17 : 0;
 
-  // SM pays, H collects (net)
-  const smPays   = lossWithParcial;
-  const hCollects = lossParcial - lossWithParcial;
+  // Parcial (h horas) = R16, R19, R20 del Excel
+  const R16 = (O16 / 8) * h;
+  const R19 = R16 * O18;
+  const R20 = O17 > 0 ? R19 / O17 : 0;
 
   return {
-    total, nH: huelga.length, nSM: sm.length,
-    avgSalary, compParcial, compTotal,
-    lossParcial, lossFull,
-    fundParcial, fundFull,
-    lossWithParcial, lossWithFull,
-    smPays, hCollects,
+    total: O17,
+    nH: O18,
+    nSM: sm.length,
+    avgSalary: O14,
+    compTotal: O15,
+    compParcial: (O15 / 8) * h,
+    lossFull: O16,
+    lossParcial: R16,
+    fundFull: O19,
+    fundParcial: R19,
+    lossWithFull: O20,
+    lossWithParcial: R20,
+    smPays: R20,
+    hCollects: R16 - R20,
+    smPaysFull: O20,
+    hCollectsFull: O16 - O20,
   };
 }
 
@@ -820,7 +841,7 @@ function render() {
 
 function updateBadge() {
   const pend = S.workers.filter(w =>
-    ((w.sit === 'SM' || w.sit === 'Trabaja') && !w.paid) || (w.sit === 'H' && !w.collected)
+    (isTrabaja(w) && !w.paid) || (w.sit === 'H' && !w.collected)
   ).length;
   const b = document.getElementById('badge-pend');
   b.textContent = pend;
@@ -830,7 +851,7 @@ function updateBadge() {
 // ── RESUMEN ──
 function renderResumen() {
   const c = calc();
-  const totalSMPend = S.workers.filter(w => w.sit==='SM' && !w.paid).length;
+  const totalSMPend = S.workers.filter(w => isTrabaja(w) && !w.paid).length;
   const totalHPend  = S.workers.filter(w => w.sit==='H'  && !w.collected).length;
   const pendTotal   = totalSMPend + totalHPend;
 
@@ -873,7 +894,7 @@ function renderResumen() {
   `;
 
   // ── CAJA DEL ORGANIZADOR ──
-  const smWorkers  = S.workers.filter(w=>w.sit==='SM'||w.sit==='Trabaja');
+  const smWorkers  = S.workers.filter(isTrabaja);
   const hWorkers   = S.workers.filter(w=>w.sit==='H');
   const smPaid     = smWorkers.filter(w=>w.paid);
   const smPending  = smWorkers.filter(w=>!w.paid);
@@ -1004,6 +1025,7 @@ async function renderWorkers() {
   tbody.innerHTML = S.workers.map(w => {
     const isH = w.sit === 'H';
     const isNP = w.sit === 'NP';
+    const isSA = w.sit === 'SA';
     const done = isH ? w.collected : w.paid;
     const importe = isH ? c.hCollects : c.smPays;
     const sign = isH ? '+' : '−';
@@ -1025,7 +1047,7 @@ async function renderWorkers() {
     const sitOptions = `
       <option value="SA" ${w.sit==='SA'?'selected':''}>Sin asignar</option>
       <option value="H"  ${w.sit==='H' ?'selected':''}>Huelga</option>
-      <option value="SM" ${w.sit==='SM'?'selected':''}>Trabaja</option>
+      <option value="Trabaja" ${isTrabaja(w)?'selected':''}>Trabaja</option>
       <option value="NP" ${w.sit==='NP'?'selected':''}>No participa</option>`;
     return `
       <tr>
@@ -1044,7 +1066,7 @@ async function renderWorkers() {
             ${sitOptions}
           </select>
         </td>
-        <td style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:${isH?'var(--green)':'var(--gold)'};text-align:right;white-space:nowrap">${isNP?'—':((isH?'+':'−')+fmt(importe))}</td>
+        <td style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:${isH?'var(--green)':'var(--gold)'};text-align:right;white-space:nowrap">${(isNP||isSA)?'—':((isH?'+':'−')+fmt(importe))}</td>
         <td style="text-align:center;white-space:nowrap">
           ${(() => {
             if (!window.AW_DOC_ID) return '';
@@ -1186,7 +1208,7 @@ function svgBar(val, max, col, label, sublabel) {
 
 function renderAnalisis() {
   const c = calc();
-  const smW = S.workers.filter(w=>w.sit==='SM');
+  const smW = S.workers.filter(isTrabaja);
   const hW  = S.workers.filter(w=>w.sit==='H');
 
   // KPIs
@@ -1296,7 +1318,7 @@ function renderAnalisis() {
   const convRows = S.convenios.map((cv,i) => {
     const count  = S.workers.filter(w=>w.conv===cv.id).length;
     const hCount = S.workers.filter(w=>w.conv===cv.id && w.sit==='H').length;
-    const smCount= S.workers.filter(w=>w.conv===cv.id && w.sit==='SM').length;
+    const smCount= S.workers.filter(w=>w.conv===cv.id && isTrabaja(w)).length;
     const pct    = S.workers.length > 0 ? (count/S.workers.length*100).toFixed(0) : 0;
     const totalComps = S.complementos.reduce((s,cp)=>s+(cp.vals[cv.id]||0),0);
     const totalDia   = cv.salary + totalComps;
@@ -1359,7 +1381,7 @@ function renderAnalisis() {
   // Participación real (SM + NP cuentan como trabajadores ese día)
   const totalAll   = S.workers.length;
   const nHuelga    = S.workers.filter(w => w.sit === 'H').length;
-  const nSMexp     = S.workers.filter(w => w.sit === 'SM' || w.sit === 'Trabaja').length;
+  const nSMexp     = S.workers.filter(isTrabaja).length;
   const nNP        = S.workers.filter(w => w.sit === 'NP').length;
   const nTrabajan  = nSMexp + nNP;  // SM explícitos + no participan
   const pctH       = totalAll > 0 ? (nHuelga   / totalAll * 100).toFixed(1) : 0;
@@ -1615,7 +1637,7 @@ function inlineUpdateWorker(id, field, value) {
 function toggleStatus(id) {
   const w = S.workers.find(x=>x.id===id);
   if (!w) return;
-  if (w.sit==='SM' || w.sit==='Trabaja') w.paid = !w.paid;
+  if (isTrabaja(w)) w.paid = !w.paid;
   else w.collected = !w.collected;
   saveState(); render();
 }
