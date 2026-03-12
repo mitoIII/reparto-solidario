@@ -2249,26 +2249,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Auto-login si hay sesión guardada ──────────────────────────
   const sesionGuardada = localStorage.getItem('rs-session');
   if (sesionGuardada) {
-    try {
-      const ses = JSON.parse(sesionGuardada);
-      const doc = await awGetGrupo(ses.docId);
-      window.AW_DOC_ID = doc.$id;
-      window.AW_IS_ADMIN = ses.esAdmin;
-      window.AW_USER_NAME = ses.userName;
-      S = loadState(doc.datos || null);
-      if (!S.historial) S.historial = [];
-      // Load miembros cache
-      try { window._miembrosCache = JSON.parse(doc.miembros || '[]'); } catch(e) { window._miembrosCache = []; }
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('main-app').style.display = 'flex';
-      document.getElementById('sidebar-grupo-nombre').textContent = ses.nombre;
-      applyRoleUI();
-      render();
-      go('resumen');
-      awStartPolling();
-    } catch(e) {
-      // Session expired or error — go to login
-      localStorage.removeItem('rs-session');
+    let ses;
+    try { ses = JSON.parse(sesionGuardada); } catch(e) { ses = null; }
+    if (ses && ses.docId) {
+      // Show loading indicator while connecting
+      const loginScreen = document.getElementById('login-screen');
+      const loadingMsg = document.createElement('div');
+      loadingMsg.style.cssText = 'text-align:center;color:var(--muted);font-size:13px;margin-top:20px';
+      loadingMsg.textContent = 'Conectando...';
+      if (loginScreen) loginScreen.appendChild(loadingMsg);
+
+      let intentos = 0;
+      const tryLogin = async () => {
+        intentos++;
+        try {
+          const doc = await awGetGrupo(ses.docId);
+          window.AW_DOC_ID = doc.$id;
+          window.AW_IS_ADMIN = ses.esAdmin;
+          window.AW_USER_NAME = ses.userName;
+          S = loadState(doc.datos || null);
+          if (!S.historial) S.historial = [];
+          try { window._miembrosCache = JSON.parse(doc.miembros || '[]'); } catch(e) { window._miembrosCache = []; }
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('main-app').style.display = 'flex';
+          document.getElementById('sidebar-grupo-nombre').textContent = ses.nombre;
+          applyRoleUI();
+          render();
+          go('resumen');
+          awStartPolling();
+        } catch(e) {
+          if (intentos < 3) {
+            // Retry after 1.5s (network may not be ready)
+            setTimeout(tryLogin, 1500);
+          } else {
+            // Only remove session if group no longer exists (404)
+            if (e.code === 404) {
+              localStorage.removeItem('rs-session');
+            }
+            if (loadingMsg) loadingMsg.remove();
+          }
+        }
+      };
+      tryLogin();
     }
   }
 });
