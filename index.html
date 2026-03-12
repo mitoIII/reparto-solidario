@@ -703,7 +703,8 @@ function migrateState(s) {
   if (!s.complementos) s.complementos = [];
   if (!s.hours)        s.hours        = 4;
   if (!s.simDays)      s.simDays      = 2;
-  // Migrar sit antiguo 'SM' a 'Trabaja' ya no es necesario — isActive() lo maneja
+  // Migrar sit antiguo 'SM' -> 'Trabaja' (unificación de valores)
+  s.workers.forEach(w => { if (w.sit === 'SM') w.sit = 'Trabaja'; });
   return s;
 }
 
@@ -739,7 +740,7 @@ function calc(hours) {
   const active = workers.filter(w => w.sit !== 'NP' && w.sit !== 'SA');
   const total = active.length;
   const huelga = workers.filter(w => w.sit === 'H');
-  const sm = workers.filter(w => w.sit === 'SM');
+  const sm = workers.filter(w => w.sit === 'Trabaja');
 
   // Weighted average salary (only active participants)
   let salarySum = 0;
@@ -837,7 +838,7 @@ function render() {
 
 function updateBadge(c) {
   const pend = S.workers.filter(w =>
-    (w.sit === 'SM' && !w.paid) || (w.sit === 'H' && !w.collected)
+    (w.sit === 'Trabaja' && !w.paid) || (w.sit === 'H' && !w.collected)
   ).length;
   const b = document.getElementById('badge-pend');
   b.textContent = pend;
@@ -846,7 +847,7 @@ function updateBadge(c) {
 
 // ── RESUMEN ──
 function renderResumen(c) {
-  const totalSMPend = S.workers.filter(w => w.sit==='SM' && !w.paid).length;
+  const totalSMPend = S.workers.filter(w => w.sit==='Trabaja' && !w.paid).length;
   const totalHPend  = S.workers.filter(w => w.sit==='H'  && !w.collected).length;
   const pendTotal   = totalSMPend + totalHPend;
 
@@ -889,7 +890,7 @@ function renderResumen(c) {
   `;
 
   // ── CAJA DEL ORGANIZADOR ──
-  const smWorkers  = S.workers.filter(w=>w.sit==='SM');
+  const smWorkers  = S.workers.filter(w=>w.sit==='Trabaja');
   const hWorkers   = S.workers.filter(w=>w.sit==='H');
   const smPaid     = smWorkers.filter(w=>w.paid);
   const smPending  = smWorkers.filter(w=>!w.paid);
@@ -1045,7 +1046,7 @@ function _buildWorkersHTML(c, isAdmin) {
     const sitOptions = `
       <option value="SA" ${w.sit==='SA'?'selected':''}>Sin asignar</option>
       <option value="H"  ${w.sit==='H' ?'selected':''}>Huelga</option>
-      <option value="SM" ${w.sit==='SM'?'selected':''}>Trabaja</option>
+      <option value="Trabaja" ${w.sit==='Trabaja'?'selected':''}>Trabaja</option>
       <option value="NP" ${w.sit==='NP'?'selected':''}>No participa</option>`;
     return `
       <tr>
@@ -1064,7 +1065,7 @@ function _buildWorkersHTML(c, isAdmin) {
             ${sitOptions}
           </select>
         </td>
-        <td style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:${isH?'var(--green)':'var(--gold)'};text-align:right;white-space:nowrap">${isNP?'—':((isH?'+':'−')+fmt(importe))}</td>
+        <td style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:${isH?'var(--green)':'var(--gold)'};text-align:right;white-space:nowrap">${(isNP || w.sit==='SA') ? '—' : ((isH?'+':'−')+fmt(importe))}</td>
         <td style="text-align:center;white-space:nowrap">
           ${(() => {
             if (!window.AW_DOC_ID) return '';
@@ -1165,7 +1166,7 @@ async function toggleAdminMiembroByName(workerId) {
   try {
     await awDB.updateDocument(AW_DB, AW_COL, window.AW_DOC_ID, { miembros: JSON.stringify(miembros) });
     window._miembrosCache = miembros;
-    renderWorkers();
+    render();
   } catch(e) { alert('Error al actualizar el rol'); }
 }
 
@@ -1205,7 +1206,7 @@ function svgBar(val, max, col, label, sublabel) {
 }
 
 function renderAnalisis(c) {
-  const smW = S.workers.filter(w=>w.sit==='SM');
+  const smW = S.workers.filter(w=>w.sit==='Trabaja');
   const hW  = S.workers.filter(w=>w.sit==='H');
 
   // KPIs
@@ -1315,7 +1316,7 @@ function renderAnalisis(c) {
   const convRows = S.convenios.map((cv,i) => {
     const count  = S.workers.filter(w=>w.conv===cv.id).length;
     const hCount = S.workers.filter(w=>w.conv===cv.id && w.sit==='H').length;
-    const smCount= S.workers.filter(w=>w.conv===cv.id && w.sit==='SM').length;
+    const smCount= S.workers.filter(w=>w.conv===cv.id && w.sit==='Trabaja').length;
     const pct    = S.workers.length > 0 ? (count/S.workers.length*100).toFixed(0) : 0;
     const totalComps = S.complementos.reduce((s,cp)=>s+(cp.vals[cv.id]||0),0);
     const totalDia   = cv.salary + totalComps;
@@ -1378,7 +1379,7 @@ function renderAnalisis(c) {
   // Participación real (SM + NP cuentan como trabajadores ese día)
   const totalAll   = S.workers.length;
   const nHuelga    = S.workers.filter(w => w.sit === 'H').length;
-  const nSMexp     = S.workers.filter(w => w.sit === 'SM').length;
+  const nSMexp     = S.workers.filter(w => w.sit === 'Trabaja').length;
   const nNP        = S.workers.filter(w => w.sit === 'NP').length;
   const nTrabajan  = nSMexp + nNP;  // SM explícitos + no participan
   const pctH       = totalAll > 0 ? (nHuelga   / totalAll * 100).toFixed(1) : 0;
@@ -1630,7 +1631,7 @@ function toggleStatus(id) {
   if (!window.AW_IS_ADMIN) return;
   const w = S.workers.find(x=>x.id===id);
   if (!w) return;
-  if (w.sit==='SM') w.paid = !w.paid;
+  if (w.sit==='Trabaja') w.paid = !w.paid;
   else w.collected = !w.collected;
   saveState(); render();
 }
