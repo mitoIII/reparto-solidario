@@ -993,6 +993,7 @@ async function renderWorkers() {
       window._miembrosCache = JSON.parse(doc.miembros || '[]');
     } catch(e) {}
   }
+  const isAdmin = window.AW_IS_ADMIN === true;
   const c = calc();
   const tbody = document.getElementById('workers-table');
   if (S.workers.length === 0) {
@@ -1029,16 +1030,16 @@ async function renderWorkers() {
       <tr>
         <td style="font-size:13px"><strong>${w.name}</strong></td>
         <td style="overflow:visible">
-          <select style="width:100%;min-width:120px;background:var(--card2);border:1px solid var(--border2);border-radius:5px;padding:6px 4px;color:var(--text);font-size:12px;cursor:${window.AW_IS_ADMIN?'pointer':'default'};opacity:${window.AW_IS_ADMIN?'1':'0.6'}"
+          <select style="width:100%;min-width:120px;background:var(--card2);border:1px solid var(--border2);border-radius:5px;padding:6px 4px;color:var(--text);font-size:12px;cursor:${isAdmin?'pointer':'default'};opacity:${isAdmin?'1':'0.6'}"
             onchange="inlineUpdateWorker(${w.id},'conv',this.value)"
-            ${window.AW_IS_ADMIN ? '' : 'disabled'}>
+            ${isAdmin ? '' : 'disabled'}>
             ${convOptions}
           </select>
         </td>
         <td style="overflow:visible">
-          <select style="width:100%;min-width:110px;background:var(--card2);border:1px solid var(--border2);border-radius:5px;padding:6px 4px;font-size:12px;cursor:${window.AW_IS_ADMIN?'pointer':'default'};color:${w.sit==='SA'?'#888':isNP?'var(--muted)':isH?'var(--blue)':'var(--gold)'};font-weight:600;opacity:${window.AW_IS_ADMIN?'1':'0.8'}"
+          <select style="width:100%;min-width:110px;background:var(--card2);border:1px solid var(--border2);border-radius:5px;padding:6px 4px;font-size:12px;cursor:${isAdmin?'pointer':'default'};color:${w.sit==='SA'?'#888':isNP?'var(--muted)':isH?'var(--blue)':'var(--gold)'};font-weight:600;opacity:${isAdmin?'1':'0.8'}"
             onchange="inlineUpdateWorker(${w.id},'sit',this.value)"
-            ${window.AW_IS_ADMIN ? '' : 'disabled'}>
+            ${isAdmin ? '' : 'disabled'}>
             ${sitOptions}
           </select>
         </td>
@@ -1056,14 +1057,14 @@ async function renderWorkers() {
               : '<span style="color:#4da6ff;font-size:14px">👁</span>';
             // Show pencil for all workers that are not the current user, if current user is admin
             const esSelf = norm(w.name) === norm(window.AW_USER_NAME || '');
-            const lapiz = (window.AW_IS_ADMIN === true) && !esSelf
+            const lapiz = isAdmin && !esSelf
               ? '<button onclick="toggleAdminMiembroByName('' + w.name.replace(/'/g,"\'") + '')" style="background:none;border:none;font-size:13px;color:var(--muted);cursor:pointer;padding:2px 3px;border-radius:4px;margin-left:2px;opacity:0.7">✏️</button>'
               : '';
             return rolBadge + lapiz;
           })()}
         </td>
         <td style="text-align:right">
-          ${window.AW_IS_ADMIN ? `<button class="btn btn-red btn-sm" onclick="deleteWorker(${w.id})" style="padding:5px 6px">✕</button>` : ''}
+          ${isAdmin ? `<button class="btn btn-red btn-sm" onclick="deleteWorker(${w.id})" style="padding:5px 6px">✕</button>` : ''}
         </td>
       </tr>`;
   }).join('');
