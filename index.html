@@ -544,7 +544,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 
 
 <!-- ══ MODAL PIN ══ -->
-<div id="pin-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:20px">
+<div id="pin-modal" class="modal-bg" style="z-index:10000">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:100%;max-width:320px;text-align:center;overflow:hidden">
     <div style="font-size:32px;margin-bottom:8px">🔐</div>
     <div style="font-size:17px;font-weight:700;margin-bottom:4px" id="pin-modal-nombre"></div>
@@ -559,7 +559,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </div>
 
 <!-- ══ MODAL NOMBRE ══ -->
-<div id="nombre-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:20px">
+<div id="nombre-modal" class="modal-bg" style="z-index:10001">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:100%;max-width:340px;text-align:center">
     <div style="font-size:36px;margin-bottom:10px">👋</div>
     <div style="font-size:17px;font-weight:700;margin-bottom:6px">¡Bienvenido!</div>
@@ -674,38 +674,38 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 // ══════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════
+// ── Convenios y complementos por defecto ──────────────────────
+// ÚNICA fuente de verdad. Se usa en DEFAULTS, migrateState y estadoVacio.
+// Si necesitas cambiar un salario o añadir un convenio, solo aquí.
+const DEF_CONVENIOS = [
+  {id:"Irvia G6", name:"Irvia Grupo 6", salary: 2002.25/30},
+  {id:"Irvia G5", name:"Irvia Grupo 5", salary: 2063.39/30},
+  {id:"Alstom",   name:"Alstom",        salary: 68.78},
+];
+const DEF_COMPLEMENTOS = [
+  {id:"noct", name:"Nocturnidad", vals:{"Irvia G6":19.76,"Irvia G5":19.76,"Alstom":39.28}},
+  {id:"grt",  name:"GRT",         vals:{"Irvia G6":3.15, "Irvia G5":3.15, "Alstom":10.76}},
+];
+
+// DEFAULTS: estado inicial limpio (workers vacío — no mostrar datos de otra empresa)
 const DEFAULTS = {
   hours: 4,
   simDays: 2,
-  workers: [
-    {id:1,  name:"Manel Jerez",    conv:"Irvia G5", sit:"Trabaja", paid:true,  collected:false},
-    {id:2,  name:"Oriol Sibecas",  conv:"Irvia G6", sit:"Trabaja", paid:true,  collected:false},
-    {id:3,  name:"Juan Sanchez",   conv:"Irvia G5", sit:"Trabaja", paid:false, collected:false},
-    {id:4,  name:"Oscar Quesada",  conv:"Irvia G6", sit:"Trabaja", paid:false, collected:false},
-    {id:5,  name:"Jesus Martin",   conv:"Irvia G6", sit:"Trabaja", paid:false, collected:false},
-    {id:6,  name:"Alex Morda",     conv:"Irvia G6", sit:"H",  paid:false, collected:true },
-    {id:7,  name:"Farid",          conv:"Irvia G5", sit:"H",  paid:false, collected:true },
-    {id:8,  name:"David Sanchez",  conv:"Irvia G5", sit:"H",  paid:false, collected:false},
-    {id:9,  name:"Daniel Gismero", conv:"Irvia G6", sit:"H",  paid:false, collected:false},
-    {id:10, name:"Yasen",          conv:"Irvia G6", sit:"H",  paid:false, collected:false},
-    {id:11, name:"Luis",           conv:"Alstom",   sit:"H",  paid:false, collected:false},
-    {id:12, name:"Oscar Alonso",   conv:"Irvia G5", sit:"H",  paid:false, collected:false},
-    {id:13, name:"Sergio Moreida", conv:"Irvia G5", sit:"H",  paid:false, collected:false},
-    {id:14, name:"Ruben Sancho",   conv:"Irvia G5", sit:"H",  paid:false, collected:false},
-  ],
-  convenios: [
-    {id:"Irvia G6", name:"Irvia Grupo 6", salary: 2002.25/30},
-    {id:"Irvia G5", name:"Irvia Grupo 5", salary: 2063.39/30},
-    {id:"Alstom",   name:"Alstom",        salary: 68.78},
-  ],
-  complementos: [
-    {id:"noct", name:"Nocturnidad", vals:{"Irvia G6":19.76,"Irvia G5":19.76,"Alstom":39.28}},
-    {id:"grt",  name:"GRT",         vals:{"Irvia G6":3.15, "Irvia G5":3.15, "Alstom":10.76}},
-  ],
+  workers: [],
+  convenios:    DEF_CONVENIOS,
+  complementos: DEF_COMPLEMENTOS,
   historial: [],
 };
 
 let S = {}; // loaded after login
+
+// ── normName(s) ───────────────────────────────────────────────
+// Normaliza un nombre para comparación: minúsculas, sin tildes, sin espacios extra.
+// Usada en reclamarIdentidad, nombreConfirmar, toggleAdminMiembroByName, renderWorkers.
+// Antes se redefinía inline en 4 sitios distintos.
+function normName(s) {
+  return s ? s.toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g,'') : '';
+}
 
 // ── migrateState ──────────────────────────────────────────────
 // Corrige datos guardados por versiones anteriores del código.
@@ -718,17 +718,9 @@ let S = {}; // loaded after login
 // porque calc() busca salarios en S.convenios y no encuentra ninguno.
 function migrateState(s) {
   if (!s) return s;
-  const defConvenios = [
-    {id:"Irvia G6", name:"Irvia Grupo 6", salary: 2002.25/30},
-    {id:"Irvia G5", name:"Irvia Grupo 5", salary: 2063.39/30},
-    {id:"Alstom",   name:"Alstom",        salary: 68.78}
-  ];
-  const defComplementos = [
-    {id:"noct", name:"Nocturnidad", vals:{"Irvia G6":19.76,"Irvia G5":19.76,"Alstom":39.28}},
-    {id:"grt",  name:"GRT",         vals:{"Irvia G6":3.15, "Irvia G5":3.15, "Alstom":10.76}}
-  ];
-  if (!s.convenios    || s.convenios.length    === 0) s.convenios    = defConvenios;
-  if (!s.complementos || s.complementos.length === 0) s.complementos = defComplementos;
+  // Usar DEF_CONVENIOS/DEF_COMPLEMENTOS — definidos una sola vez arriba
+  if (!s.convenios    || s.convenios.length    === 0) s.convenios    = DEF_CONVENIOS;
+  if (!s.complementos || s.complementos.length === 0) s.complementos = DEF_COMPLEMENTOS;
   if (!s.historial) s.historial = [];
   if (s.workers) s.workers.forEach(w => { if (w.sit === 'SM') w.sit = 'Trabaja'; });
   return s;
@@ -756,16 +748,19 @@ function loadState(datosJSON) {
 }
 
 // ── saveState() ──────────────────────────────────────────────
-// Guarda S en dos sitios:
-//   1. localStorage con clave específica por grupo (rs-data-<docId>)
-//      Así cada grupo tiene su propio espacio y no se mezclan.
-//   2. Appwrite (si hay sesión activa) para sincronizar con otros miembros.
-// Se llama después de cualquier cambio en S (añadir compañero, marcar pagado, etc.)
+// Guarda S en localStorage inmediatamente (nunca se retrasa).
+// La escritura a Appwrite usa debounce de 600ms para evitar ráfagas:
+// si el usuario hace varios cambios seguidos (mover slider, marcar pagos)
+// solo se envía la última escritura, no una por cada acción.
+let _saveDebounce = null;
 function saveState() {
   const key = window.AW_DOC_ID ? ('rs-data-' + window.AW_DOC_ID) : 'reparto-v2';
-  localStorage.setItem(key, JSON.stringify(S));
+  localStorage.setItem(key, JSON.stringify(S)); // inmediato, siempre
   if (window.AW_DOC_ID) {
-    awSaveData(JSON.stringify(S)).catch(e => console.warn('Appwrite sync error:', e));
+    clearTimeout(_saveDebounce);
+    _saveDebounce = setTimeout(() => {
+      awSaveData(JSON.stringify(S)).catch(e => console.warn('Appwrite sync error:', e));
+    }, 600);
   }
 }
 
@@ -883,35 +878,53 @@ function fmt(n) {
 // ══════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════
+// go(tab) — navega a una pestaña y renderiza SOLO esa sección.
+// Antes llamaba render() completo (6 funciones + 4 calc()) en cada navegación.
+// Ahora cada pestaña renderiza solo lo que necesita, con c ya calculado.
+const TAB_RENDERERS = {
+  resumen:    (c) => { renderResumen(c); },
+  companeros: (c) => { renderWorkers(c); },
+  config:     (c) => { renderConfig(c); },
+  analisis:   (c) => { renderAnalisis(c); },
+  simulador:  ()  => { const d = parseInt(document.getElementById('days-slider').value)||S.simDays; simUpdate(d); },
+  historial:  ()  => { renderHistorial(); },
+  miembros:   ()  => { renderMiembros(); },
+};
 function go(tab) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  // Set today's date on historial input if empty
   const hf = document.getElementById('hist-fecha');
   if (hf && !hf.value) hf.value = new Date().toISOString().split('T')[0];
-
   document.querySelectorAll('nav a').forEach(a => {
     a.classList.toggle('active', a.dataset.tab === tab);
   });
   document.getElementById('s-' + tab).classList.add('active');
-  render();
+  updateBadge();
+  const renderer = TAB_RENDERERS[tab];
+  if (renderer) { const c = calc(); renderer(c); }
 }
 
 // ══════════════════════════════════════════════
 // RENDER
 // ══════════════════════════════════════════════
+// calc() se llama UNA SOLA VEZ y se pasa a todas las funciones.
+// Antes se llamaba 4+ veces por render (una en cada renderXxx).
+// Las funciones aceptan c como parámetro opcional para poder
+// llamarse individualmente también (ej: renderHistorial() solo).
 function render() {
-  renderResumen();
-  renderWorkers();
-  renderConfig();
-  renderAnalisis();
-  renderSim();
+  const c = calc();
+  renderResumen(c);
+  renderWorkers(c);
+  renderConfig(c);
+  renderAnalisis(c);
+  const d = parseInt(document.getElementById('days-slider').value) || S.simDays;
+  simUpdate(d);
   renderHistorial();
   updateBadge();
 }
 
 // updateBadge — actualiza el número rojo del menú Compañeros
 // Cuenta pendientes: SM/Trabaja que no han pagado + H que no han cobrado
-function updateBadge() {
+function updateBadge(c) {
   const pend = S.workers.filter(w =>
     (isTrabaja(w) && !w.paid) || (w.sit === 'H' && !w.collected)
   ).length;
@@ -921,8 +934,8 @@ function updateBadge() {
 }
 
 // ── RESUMEN ──
-function renderResumen() {
-  const c = calc();
+function renderResumen(c) {
+  c = c || calc();
   const totalSMPend = S.workers.filter(w => isTrabaja(w) && !w.paid).length;
   const totalHPend  = S.workers.filter(w => w.sit==='H'  && !w.collected).length;
   const pendTotal   = totalSMPend + totalHPend;
@@ -1095,13 +1108,10 @@ function refreshMiembrosCache() {
 // si Appwrite tardaba o fallaba (la función se pausaba y el DOM no se actualizaba).
 // Ahora usa _miembrosCache (que se carga al entrar y se actualiza en background).
 // El refresco de miembros se hace aparte en refreshMiembrosCache() sin bloquear UI.
-function renderWorkers() {
-  // Refrescar cache en background sin bloquear el render actual
-  if (window.AW_DOC_ID) {
-    refreshMiembrosCache();
-  }
+function renderWorkers(c) {
+  if (window.AW_DOC_ID) refreshMiembrosCache();
+  c = c || calc();
   const isAdmin = window.AW_IS_ADMIN === true;
-  const c = calc();
   const tbody = document.getElementById('workers-table');
   if (S.workers.length === 0) {
     tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="ei">👥</div><p>No hay compañeros. Añade el primero.</p></div></td></tr>`;
@@ -1156,15 +1166,12 @@ function renderWorkers() {
           ${(() => {
             if (!window.AW_DOC_ID) return '';
             const miembros = window._miembrosCache || [];
-            const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
-            const m = miembros.find(x => norm(x.nombre) === norm(w.name));
-            // Badge based on miembros if found, otherwise default lector
+            const m = miembros.find(x => normName(x.nombre) === normName(w.name));
             const esAdmin = m ? m.esAdmin : false;
             const rolBadge = esAdmin
               ? '<span style="color:var(--gold);font-size:14px">👑</span>'
               : '<span style="color:#4da6ff;font-size:14px">👁</span>';
-            // Show pencil for all workers that are not the current user, if current user is admin
-            const esSelf = norm(w.name) === norm(window.AW_USER_NAME || '');
+            const esSelf = normName(w.name) === normName(window.AW_USER_NAME || '');
             const lapiz = isAdmin && !esSelf
               ? `<button onclick="toggleAdminMiembroByName(${w.id})" style="background:none;border:none;font-size:13px;color:var(--muted);cursor:pointer;padding:2px 3px;border-radius:4px;margin-left:2px;opacity:0.7">✏️</button>`
               : '';
@@ -1241,8 +1248,7 @@ async function toggleAdminMiembroByName(workerId) {
   if (!worker) return;
   const nombre = worker.name;
   let miembros = window._miembrosCache || [];
-  const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
-  const idx = miembros.findIndex(m => norm(m.nombre) === norm(nombre));
+  const idx = miembros.findIndex(m => normName(m.nombre) === normName(nombre));
   if (idx < 0) {
     // Not in miembros yet — add them
     miembros.push({ nombre, esAdmin: true, fecha: new Date().toISOString() });
@@ -1291,8 +1297,8 @@ function svgBar(val, max, col, label, sublabel) {
     </div>`;
 }
 
-function renderAnalisis() {
-  const c = calc();
+function renderAnalisis(c) {
+  c = c || calc();
   const smW = S.workers.filter(isTrabaja);
   const hW  = S.workers.filter(w=>w.sit==='H');
 
@@ -1554,13 +1560,12 @@ function renderAnalisis() {
 }
 
 // ── CONFIG ──
-function renderConfig() {
-  // Slider
+function renderConfig(c) {
+  c = c || calc();
   const slider = document.getElementById('hours-slider');
   slider.value = S.hours;
   document.getElementById('hours-display').textContent = S.hours + 'h';
 
-  // Convenios
   const convList = document.getElementById('conv-list');
   convList.innerHTML = S.convenios.map((cv,i) => `
     <div style="padding:12px 0;border-bottom:1px solid var(--border)">
@@ -1608,7 +1613,6 @@ function renderConfig() {
   }).join('');
 
   // Calc info
-  const c = calc();
   document.getElementById('calc-info').innerHTML = `
     <div class="grid3" style="gap:12px">
       <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Salario medio ponderado</div><div style="font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700">${fmt(c.avgSalary)}<span style="font-size:12px;color:var(--muted)">/día</span></div></div>
@@ -1619,11 +1623,7 @@ function renderConfig() {
 }
 
 // ── SIMULATOR ──
-function renderSim() {
-  const d = parseInt(document.getElementById('days-slider').value) || S.simDays;
-  simUpdate(d);
-}
-
+// renderSim() eliminado — render() llama simUpdate directamente
 function simUpdate(days) {
   S.simDays = parseInt(days);
   document.getElementById('days-display').textContent = days + (days==1?' día':' días');
@@ -2121,12 +2121,12 @@ function lsSeleccionar(id, nombre) {
   document.getElementById('pin-modal-nombre').textContent = nombre;
   document.getElementById('pin-input').value = '';
   document.getElementById('pin-error').style.display = 'none';
-  document.getElementById('pin-modal').style.display = 'flex';
+  document.getElementById('pin-modal').classList.add('open');
   setTimeout(() => document.getElementById('pin-input').focus(), 100);
 }
 
 function pinCerrar() {
-  document.getElementById('pin-modal').style.display = 'none';
+  document.getElementById('pin-modal').classList.remove('open');
   lsGrupoSeleccionado = null;
 }
 
@@ -2144,7 +2144,7 @@ async function pinEntrar() {
       return;
     }
     errEl.style.display = 'none';
-    document.getElementById('pin-modal').style.display = 'none';
+    document.getElementById('pin-modal').classList.remove('open');
     window.AW_DOC_ID = doc.$id;
 
     // Check if admin (creator stored in miembros)
@@ -2159,7 +2159,6 @@ async function pinEntrar() {
       window.AW_IS_ADMIN = u.esAdmin || false;
       window.AW_USER_NAME = u.nombre;
       S = loadState(doc.datos || null);
-      if (!S.historial) S.historial = [];
       lsEntrar(doc.nombre);
     } else {
       // Primera vez — preguntar nombre
@@ -2168,7 +2167,7 @@ async function pinEntrar() {
       _nuevoNombreGrupo = doc.nombre;
       _docMiembros = miembros;
       _docDatos = doc.datos;
-      document.getElementById('nombre-modal').style.display = 'flex';
+      document.getElementById('nombre-modal').classList.add('open');
       setTimeout(() => document.getElementById('nombre-input').focus(), 100);
     }
   } catch(e) {
@@ -2193,18 +2192,17 @@ async function nombreConfirmar() {
   const nombre = document.getElementById('nombre-input').value.trim();
   if (!nombre) { document.getElementById('nombre-input').focus(); return; }
 
-  const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
-  const nombreNorm = norm(nombre);
+  const nombreNorm = normName(nombre);
 
   // Exact match
-  const exacto = _docMiembros.find(m => norm(m.nombre) === nombreNorm);
+  const exacto = _docMiembros.find(m => normName(m.nombre) === nombreNorm);
   if (exacto) {
     mostrarSugerencia(exacto, nombre);
     return;
   }
 
   // Similar match (Levenshtein ≤ 2)
-  const similar = _docMiembros.find(m => levenshtein(norm(m.nombre), nombreNorm) <= 2);
+  const similar = _docMiembros.find(m => levenshtein(normName(m.nombre), nombreNorm) <= 2);
   if (similar) {
     mostrarSugerencia(similar, nombre);
     return;
@@ -2232,8 +2230,7 @@ function mostrarSugerencia(miembro, nombreEscrito) {
 
 async function reclamarIdentidad(nombre) {
   // User claims to be an existing member — restore their session
-  const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
-  const m = _docMiembros.find(x => norm(x.nombre) === norm(nombre));
+  const m = _docMiembros.find(x => normName(x.nombre) === normName(nombre));
   const esAdmin = m ? m.esAdmin : false;
 
   window.AW_USER_NAME = nombre;
@@ -2248,9 +2245,8 @@ async function reclamarIdentidad(nombre) {
     userName: nombre
   }));
 
-  document.getElementById('nombre-modal').style.display = 'none';
+  document.getElementById('nombre-modal').classList.remove('open');
   S = loadState(_docDatos || null);
-  if (!S.historial) S.historial = [];
   window._miembrosCache = _docMiembros;
 
   lsEntrar(_nuevoNombreGrupo);
@@ -2269,9 +2265,8 @@ async function _guardarNuevoMiembro(nombre) {
     window._miembrosCache = _docMiembros;
   } catch(e) { console.warn('Could not save member:', e); }
 
-  document.getElementById('nombre-modal').style.display = 'none';
+  document.getElementById('nombre-modal').classList.remove('open');
   S = loadState(_docDatos || null);
-  if (!S.historial) S.historial = [];
 
   const yaExiste = S.workers.find(w => w.name.toLowerCase() === nombre.toLowerCase());
   if (!yaExiste) {
@@ -2327,7 +2322,6 @@ function cerrarSesion() {
   document.getElementById('ls-buscar-resultado').innerHTML = '';
 }
 
-async function lsInit() { /* groups found by code */ }
 
 async function lsCrearGrupo() {
   const nombre = document.getElementById('ls-nombre').value.trim();
@@ -2339,22 +2333,8 @@ async function lsCrearGrupo() {
   errEl.style.display = 'none';
 
   const codigo = generarCodigo(nombre);
-  // estadoVacio: estado inicial de un grupo nuevo.
-  // IMPORTANTE: incluir convenios y complementos por defecto para que el cálculo
-  // funcione desde el primer momento sin necesidad de ir a Configuración primero.
-  const estadoVacio = JSON.stringify({
-    hours: 4, simDays: 2, workers: [],
-    convenios: [
-      {id:"Irvia G6", name:"Irvia Grupo 6", salary: 2002.25/30},
-      {id:"Irvia G5", name:"Irvia Grupo 5", salary: 2063.39/30},
-      {id:"Alstom",   name:"Alstom",        salary: 68.78}
-    ],
-    complementos: [
-      {id:"noct", name:"Nocturnidad", vals:{"Irvia G6":19.76,"Irvia G5":19.76,"Alstom":39.28}},
-      {id:"grt",  name:"GRT",         vals:{"Irvia G6":3.15, "Irvia G5":3.15, "Alstom":10.76}}
-    ],
-    historial: []
-  });
+  // Estado inicial del grupo: usa DEFAULTS (que ya tiene DEF_CONVENIOS/DEF_COMPLEMENTOS)
+  const estadoVacio = JSON.stringify(JSON.parse(JSON.stringify(DEFAULTS)));
 
   try {
     const doc = await awDB.createDocument(AW_DB, AW_COL, Appwrite.ID.unique(), { nombre, pin, codigo, datos: estadoVacio, miembros: '[]' });
@@ -2473,7 +2453,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Paso 2: cargar datos locales del grupo (clave rs-data-<docId>)
       // loadState usará AW_DOC_ID que ya está establecido
-      S = loadState(null);
+      S = loadState(null); // migrateState garantiza S.historial
 
       // Paso 3: mostrar la app inmediatamente con datos locales
       document.getElementById('login-screen').style.display = 'none';
