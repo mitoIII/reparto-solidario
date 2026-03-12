@@ -2223,7 +2223,8 @@ function showOnboarding() {
 }
 
 // Add sync indicator to logo area
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
+  // Sync indicator
   const logo = document.querySelector('.logo');
   if (logo) {
     const ind = document.createElement('div');
@@ -2246,41 +2247,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   const nomInp = document.getElementById('nombre-input');
   if (nomInp) nomInp.addEventListener('keydown', e => { if (e.key==='Enter') nombreConfirmar(); });
 
-  // ── Auto-login si hay sesión guardada ──────────────────────────
-  try {
-    const sesionGuardada = localStorage.getItem('rs-session');
-    if (sesionGuardada) {
-      const ses = JSON.parse(sesionGuardada);
-      if (ses && ses.docId) {
-        // Entrar inmediatamente con datos locales
-        window.AW_DOC_ID = ses.docId;
-        window.AW_IS_ADMIN = ses.esAdmin;
-        window.AW_USER_NAME = ses.userName;
-        // Load state from localStorage first (instant)
-        S = loadState(null);
-        if (!S.historial) S.historial = [];
-        window._miembrosCache = [];
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('main-app').style.display = 'flex';
-        document.getElementById('sidebar-grupo-nombre').textContent = ses.nombre;
-        applyRoleUI();
-        render();
-        go('resumen');
-        // Sync with Appwrite in background
+  // Auto-login — usar datos locales primero, sin esperar Appwrite
+  const sesRaw = localStorage.getItem('rs-session');
+  if (sesRaw) {
+    let ses = null;
+    try { ses = JSON.parse(sesRaw); } catch(e) {}
+    if (ses && ses.docId) {
+      window.AW_DOC_ID   = ses.docId;
+      window.AW_IS_ADMIN = ses.esAdmin;
+      window.AW_USER_NAME = ses.userName || null;
+      window._miembrosCache = [];
+      S = loadState(null);
+      if (!S.historial) S.historial = [];
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('main-app').style.display = 'flex';
+      document.getElementById('sidebar-grupo-nombre').textContent = ses.nombre || '';
+      applyRoleUI();
+      render();
+      go('resumen');
+      // Sync with Appwrite after 1s in background
+      setTimeout(function() {
+        awGetGrupo(ses.docId).then(function(doc) {
+          if (doc.datos) {
+            try { S = JSON.parse(doc.datos); render(); } catch(e) {}
+          }
+          try { window._miembrosCache = JSON.parse(doc.miembros || '[]'); } catch(e) {}
+        }).catch(function(e) { console.warn('BG sync error:', e); });
         awStartPolling();
-        // Also fetch fresh data once
-        setTimeout(async () => {
-          try {
-            const doc = await awGetGrupo(ses.docId);
-            const remoto = doc.datos ? JSON.parse(doc.datos) : null;
-            if (remoto) { S = remoto; render(); }
-            try { window._miembrosCache = JSON.parse(doc.miembros || '[]'); } catch(e) {}
-          } catch(e) { console.warn('Background sync failed:', e); }
-        }, 1000);
-      }
+      }, 1000);
     }
-  } catch(e) {
-    console.warn('Auto-login error:', e);
   }
 });
 
