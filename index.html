@@ -324,7 +324,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <!-- CAJA GRANDE -->
     <div id="res-caja"></div>
 
-    <!-- DOS COLUMNAS: SM pagan / Huelguistas cobran -->
+    <!-- DOS COLUMNAS: Trabajadores pagan / Huelguistas cobran -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
       <div class="card" style="margin-bottom:0">
         <div class="card-title" style="color:var(--gold)">📤 Trabajan — deben pagar</div>
@@ -914,9 +914,9 @@ function renderResumen(c) {
       <!-- 3 bloques simétricos -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-top:20px;padding-top:18px;border-top:1px solid var(--border)">
         ${[
-          {icon:'📥', label:'Cobrado SM',       val:fmt(cajaEnMano),  col:'var(--gold)',  sub:smPaid.length+' de '+smWorkers.length+' pagaron',    pct:smWorkers.length>0?smPaid.length/smWorkers.length*100:0,    barCol:'var(--gold)'},
+          {icon:'📥', label:'Cobrado trabajadores',       val:fmt(cajaEnMano),  col:'var(--gold)',  sub:smPaid.length+' de '+smWorkers.length+' pagaron',    pct:smWorkers.length>0?smPaid.length/smWorkers.length*100:0,    barCol:'var(--gold)'},
           {icon:'📤', label:'Entregado huelga', val:fmt(cajaEntregada),col:'var(--blue)', sub:hCollected.length+' de '+hWorkers.length+' cobraron', pct:hWorkers.length>0?hCollected.length/hWorkers.length*100:0,  barCol:'var(--blue)'},
-          {icon:'⏳', label:'Pte. cobrar',      val:fmt(pendCobrar),  col:smPending.length>0?'var(--red)':'var(--green)', sub:smPending.length+' SM sin pagar', pct:smWorkers.length>0?smPending.length/smWorkers.length*100:0, barCol:'var(--red)'},
+          {icon:'⏳', label:'Pte. cobrar',      val:fmt(pendCobrar),  col:smPending.length>0?'var(--red)':'var(--green)', sub:smPending.length+' trabajadores sin pagar', pct:smWorkers.length>0?smPending.length/smWorkers.length*100:0, barCol:'var(--red)'},
         ].map((b,i) => `
           <div style="padding:0 ${i===1?'10px':i===0?'10px 10px 0':'0 0 0 10px'};border-left:${i>0?'1px solid var(--border)':'none'}">
             <div style="font-size:10px;color:var(--muted);height:28px;display:flex;align-items:center;gap:4px">${b.icon} ${b.label}</div>
@@ -974,7 +974,7 @@ function renderResumen(c) {
   document.getElementById('res-progress').innerHTML = `
     <div class="prog-wrap">
       <div class="prog-label">
-        <span>SM — pagos realizados</span>
+        <span>Trabajan — pagos realizados</span>
         <span style="color:var(--gold)">${smDone} / ${c.nSM}</span>
       </div>
       <div class="prog"><div class="prog-fill" style="width:${c.nSM>0?smDone/c.nSM*100:0}%;background:var(--gold)"></div></div>
@@ -1240,7 +1240,7 @@ function renderAnalisis(c) {
     {val:c.lossParcial,     col:'#ff5c5c', label:'Sin reparto',   sub:'huelguista'},
     {val:c.lossWithParcial, col:'#2ecc71', label:'Con reparto',   sub:'por persona'},
     {val:c.hCollects,       col:'#f5c518', label:'Ahorro',        sub:'huelguista'},
-    {val:c.smPays,          col:'#4da6ff', label:'SM paga',       sub:'cada uno'},
+    {val:c.smPays,          col:'#4da6ff', label:'Trabajan',       sub:'cada uno'},
   ];
   document.getElementById('an-chart-compare').innerHTML = `
     <div style="font-size:11px;color:#6b7a99;margin-bottom:16px">Valores por persona · ${S.hours}h de huelga</div>
@@ -1437,7 +1437,7 @@ function renderAnalisis(c) {
     document.getElementById('an-progress').innerHTML = `
     <div class="prog-wrap">
       <div class="prog-label">
-        <span>SM — pagos realizados</span>
+        <span>Trabajan — pagos realizados</span>
         <span style="color:var(--gold);font-weight:600">${smDone} / ${smW.length}</span>
       </div>
       <div class="prog"><div class="prog-fill" style="width:${smW.length>0?smDone/smW.length*100:0}%;background:var(--gold)"></div></div>
