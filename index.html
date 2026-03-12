@@ -2148,7 +2148,8 @@ async function nombreConfirmar() {
     }
 
     // 3. Colisión con S.workers (exact o ≤ 2) → avisar que ese nombre ya existe en el grupo
-    const workerMatch = S.workers.find(w =>
+    const workers = (S && S.workers) ? S.workers : [];
+    const workerMatch = workers.find(w =>
       norm(w.name) === nombreNorm || levenshtein(norm(w.name), nombreNorm) <= 2
     );
     if (workerMatch) {
@@ -2327,6 +2328,7 @@ async function lsCrearGrupo() {
     _docDatos = estadoVacio;
     window.AW_DOC_ID = doc.$id;
     window.AW_IS_ADMIN = true;
+    S = loadState(estadoVacio); // inicializar S vacío para que la búsqueda en workers sea correcta
   } catch(e) {
     errEl.textContent = 'Error de conexión. No se pudo crear el grupo. Inténtalo de nuevo.';
     errEl.style.display = 'block';
