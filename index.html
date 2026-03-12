@@ -2247,51 +2247,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (nomInp) nomInp.addEventListener('keydown', e => { if (e.key==='Enter') nombreConfirmar(); });
 
   // ── Auto-login si hay sesión guardada ──────────────────────────
-  const sesionGuardada = localStorage.getItem('rs-session');
-  if (sesionGuardada) {
-    let ses;
-    try { ses = JSON.parse(sesionGuardada); } catch(e) { ses = null; }
-    if (ses && ses.docId) {
-      // Show loading indicator while connecting
-      const loginScreen = document.getElementById('login-screen');
-      const loadingMsg = document.createElement('div');
-      loadingMsg.style.cssText = 'text-align:center;color:var(--muted);font-size:13px;margin-top:20px';
-      loadingMsg.textContent = 'Conectando...';
-      if (loginScreen) loginScreen.appendChild(loadingMsg);
-
-      let intentos = 0;
-      const tryLogin = async () => {
-        intentos++;
-        try {
-          const doc = await awGetGrupo(ses.docId);
-          window.AW_DOC_ID = doc.$id;
-          window.AW_IS_ADMIN = ses.esAdmin;
-          window.AW_USER_NAME = ses.userName;
-          S = loadState(doc.datos || null);
-          if (!S.historial) S.historial = [];
-          try { window._miembrosCache = JSON.parse(doc.miembros || '[]'); } catch(e) { window._miembrosCache = []; }
-          document.getElementById('login-screen').style.display = 'none';
-          document.getElementById('main-app').style.display = 'flex';
-          document.getElementById('sidebar-grupo-nombre').textContent = ses.nombre;
-          applyRoleUI();
-          render();
-          go('resumen');
-          awStartPolling();
-        } catch(e) {
-          if (intentos < 3) {
-            // Retry after 1.5s (network may not be ready)
-            setTimeout(tryLogin, 1500);
-          } else {
-            // Only remove session if group no longer exists (404)
-            if (e.code === 404) {
-              localStorage.removeItem('rs-session');
-            }
-            if (loadingMsg) loadingMsg.remove();
-          }
-        }
-      };
-      tryLogin();
+  try {
+    const sesionGuardada = localStorage.getItem('rs-session');
+    if (sesionGuardada) {
+      const ses = JSON.parse(sesionGuardada);
+      if (ses && ses.docId) {
+        // Entrar inmediatamente con datos locales
+        window.AW_DOC_ID = ses.docId;
+        window.AW_IS_ADMIN = ses.esAdmin;
+        window.AW_USER_NAME = ses.userName;
+        // Load state from localStorage first (instant)
+        S = loadState(null);
+        if (!S.historial) S.historial = [];
+        window._miembrosCache = [];
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'flex';
+        document.getElementById('sidebar-grupo-nombre').textContent = ses.nombre;
+        applyRoleUI();
+        render();
+        go('resumen');
+        // Sync with Appwrite in background
+        awStartPolling();
+        // Also fetch fresh data once
+        setTimeout(async () => {
+          try {
+            const doc = await awGetGrupo(ses.docId);
+            const remoto = doc.datos ? JSON.parse(doc.datos) : null;
+            if (remoto) { S = remoto; render(); }
+            try { window._miembrosCache = JSON.parse(doc.miembros || '[]'); } catch(e) {}
+          } catch(e) { console.warn('Background sync failed:', e); }
+        }, 1000);
+      }
     }
+  } catch(e) {
+    console.warn('Auto-login error:', e);
   }
 });
 
