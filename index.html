@@ -2258,7 +2258,11 @@ async function _guardarNuevoMiembro(nombre) {
   const yaExiste = S.workers.find(w => w.name.toLowerCase() === nombre.toLowerCase());
   if (!yaExiste) {
     S.workers.push({ id: Date.now(), name: nombre, conv: S.convenios.length > 0 ? S.convenios[0].id : null, sit: 'SA' });
-    saveState();
+    // Guardar inmediatamente en Appwrite (sin debounce) para que otros usuarios vean al nuevo miembro
+    localStorage.setItem(lsDataKey(), JSON.stringify(S));
+    if (window.AW_DOC_ID) {
+      awSaveData(JSON.stringify(S)).catch(e => console.warn('Appwrite sync error:', e));
+    }
   }
 
   lsEntrar(_nuevoNombreGrupo);
