@@ -2130,17 +2130,16 @@ async function nombreConfirmar() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
 
   try {
-    // norm() is global
     const nombreNorm = norm(nombre);
 
-    // Exact match → reclamar directamente sin preguntar
+    // 1. Exact match en _docMiembros → reclamar sesión existente
     const exacto = _docMiembros.find(m => norm(m.nombre) === nombreNorm);
     if (exacto) {
       await reclamarIdentidad(exacto.nombre);
       return;
     }
 
-    // Similar match (Levenshtein ≤ 2)
+    // 2. Similar en _docMiembros (typo ≤ 2) → sugerir que es la misma persona
     const similar = _docMiembros.find(m => levenshtein(norm(m.nombre), nombreNorm) <= 2);
     if (similar) {
       if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
@@ -2148,18 +2147,13 @@ async function nombreConfirmar() {
       return;
     }
 
-    // Comprobar también contra S.workers — puede que el compañero exista en la lista
-    // pero nunca haya hecho login (no está en _docMiembros)
-    const workerExacto = S.workers.find(w => norm(w.name) === nombreNorm);
-    if (workerExacto) {
+    // 3. Colisión con S.workers (exact o ≤ 2) → avisar que ese nombre ya existe en el grupo
+    const workerMatch = S.workers.find(w =>
+      norm(w.name) === nombreNorm || levenshtein(norm(w.name), nombreNorm) <= 2
+    );
+    if (workerMatch) {
       if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
-      mostrarSugerencia({ nombre: workerExacto.name, esAdmin: false }, nombre);
-      return;
-    }
-    const workerSimilar = S.workers.find(w => levenshtein(norm(w.name), nombreNorm) <= 2);
-    if (workerSimilar) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
-      mostrarSugerencia({ nombre: workerSimilar.name, esAdmin: false }, nombre);
+      mostrarColision(workerMatch.name, nombre);
       return;
     }
 
@@ -2182,6 +2176,22 @@ function mostrarSugerencia(miembro, nombreEscrito) {
     + '</div>';
   document.getElementById('btn-si-soy-yo').onclick = function() { reclamarIdentidad(miembro.nombre); };
   document.getElementById('btn-no-soy-otro').onclick = function() {
+    errEl.style.display = 'none';
+    _guardarNuevoMiembro(nombreEscrito);
+  };
+}
+
+function mostrarColision(nombreExistente, nombreEscrito) {
+  const errEl = document.getElementById('nombre-modal-error');
+  if (!errEl) return;
+  errEl.style.display = 'block';
+  errEl.innerHTML = '<div style="margin-bottom:8px">⚠️ Ya hay un compañero llamado <strong style="color:var(--gold)">' + nombreExistente + '</strong> en este grupo. ¿Eres tú?</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button class="btn btn-primary btn-sm" style="flex:1" id="btn-colision-si">Sí, soy yo ✓</button>'
+    + '<button class="btn btn-ghost btn-sm" style="flex:1" id="btn-colision-no">No, soy otro</button>'
+    + '</div>';
+  document.getElementById('btn-colision-si').onclick = function() { reclamarIdentidad(nombreExistente); };
+  document.getElementById('btn-colision-no').onclick = function() {
     errEl.style.display = 'none';
     _guardarNuevoMiembro(nombreEscrito);
   };
