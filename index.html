@@ -2074,25 +2074,60 @@ async function nombreConfirmar() {
   const nombre = document.getElementById('nombre-input').value.trim();
   if (!nombre) { document.getElementById('nombre-input').focus(); return; }
 
-  // Check for duplicate name
   const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
-  const yaUsado = _docMiembros.some(m => norm(m.nombre) === norm(nombre));
-  if (yaUsado) {
+  const miembroExistente = _docMiembros.find(m => norm(m.nombre) === norm(nombre));
+
+  if (miembroExistente) {
+    // Name already exists — ask if it's them
     const errEl = document.getElementById('nombre-modal-error');
-    if (errEl) { errEl.style.display = 'block'; errEl.textContent = '⚠ Ese nombre ya está en uso. Elige otro o contacta al admin.'; }
+    if (errEl) {
+      errEl.style.display = 'block';
+      errEl.innerHTML = `⚠ Ese nombre ya está registrado. ¿Eres tú?
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="reclamarIdentidad('${miembroExistente.nombre.replace(/'/g,"\\'")}')">Sí, soy yo</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="document.getElementById('nombre-modal-error').style.display='none';document.getElementById('nombre-input').value='';document.getElementById('nombre-input').focus()">No, cambiar nombre</button>
+        </div>`;
+    }
     return;
   }
 
+  await _guardarNuevoMiembro(nombre);
+}
+
+async function reclamarIdentidad(nombre) {
+  // User claims to be an existing member — restore their session
+  const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
+  const m = _docMiembros.find(x => norm(x.nombre) === norm(nombre));
+  const esAdmin = m ? m.esAdmin : false;
+
+  window.AW_USER_NAME = nombre;
+  window.AW_IS_ADMIN = esAdmin;
+
+  // Save to localStorage so next time auto-login works
+  localStorage.setItem(lsUserKey(_nuevoDocId), JSON.stringify({ nombre, esAdmin }));
+  localStorage.setItem('rs-session', JSON.stringify({
+    docId: _nuevoDocId,
+    nombre: _nuevoNombreGrupo,
+    esAdmin,
+    userName: nombre
+  }));
+
+  document.getElementById('nombre-modal').style.display = 'none';
+  S = loadState(_docDatos || null);
+  if (!S.historial) S.historial = [];
+  window._miembrosCache = _docMiembros;
+
+  lsEntrar(_nuevoNombreGrupo);
+}
+
+async function _guardarNuevoMiembro(nombre) {
   window.AW_USER_NAME = nombre;
 
-  // Add to members list
   const nuevoMiembro = { nombre, esAdmin: window.AW_IS_ADMIN, fecha: new Date().toISOString() };
   _docMiembros.push(nuevoMiembro);
 
-  // Save user to localStorage
   localStorage.setItem(lsUserKey(_nuevoDocId), JSON.stringify({ nombre, esAdmin: window.AW_IS_ADMIN }));
 
-  // Update Appwrite miembros
   try {
     await awDB.updateDocument(AW_DB, AW_COL, _nuevoDocId, { miembros: JSON.stringify(_docMiembros) });
     window._miembrosCache = _docMiembros;
@@ -2102,16 +2137,9 @@ async function nombreConfirmar() {
   S = loadState(_docDatos || null);
   if (!S.historial) S.historial = [];
 
-  // Add as worker with situacion "SA" (Sin Asignar) if not already in list
   const yaExiste = S.workers.find(w => w.name.toLowerCase() === nombre.toLowerCase());
   if (!yaExiste) {
-    const nuevoWorker = {
-      id: Date.now(),
-      name: nombre,
-      conv: S.convenios.length > 0 ? S.convenios[0].id : null,
-      sit: 'SA'
-    };
-    S.workers.push(nuevoWorker);
+    S.workers.push({ id: Date.now(), name: nombre, conv: S.convenios.length > 0 ? S.convenios[0].id : null, sit: 'SA' });
     saveState();
   }
 
