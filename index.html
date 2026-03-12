@@ -1546,9 +1546,21 @@ function simUpdate(days) {
   const conFull   = c.lossWithFull * d;
   const ahorroFull = (c.lossFull - c.lossWithFull) * d;
 
-  // Días de resistencia
-  const diasP = c.lossParcial > 0 ? fondoParcial / c.fundParcial : 0;
-  const diasF = c.lossFull    > 0 ? (c.fundFull*d) / c.fundFull   : 0;
+  // Días de resistencia extra (fórmula Excel W2:W11)
+  function diasExtra(ahorro, cuotaDiaria, horasJornada) {
+    if (cuotaDiaria <= 0) return '—';
+    const ratio = ahorro / cuotaDiaria;
+    const dias  = Math.floor(ratio);
+    const horas = Math.round((ratio - dias) * horasJornada);
+    // Si horas redondea a jornada completa, sube un día
+    const diasFinal  = horas >= horasJornada ? dias + 1 : dias;
+    const horasFinal = horas >= horasJornada ? 0 : horas;
+    if (diasFinal === 0 && horasFinal === 0) return '0 horas extra';
+    if (horasFinal === 0) return `${diasFinal} día${diasFinal !== 1 ? 's' : ''} extra`;
+    return `${diasFinal} día${diasFinal !== 1 ? 's' : ''} y ${horasFinal}h extra`;
+  }
+  const resistenciaParcial = diasExtra(ahorroParcial, c.lossWithParcial, S.hours);
+  const resistenciaFull    = diasExtra(ahorroFull,    c.lossWithFull,    8);
 
   document.getElementById('sim-results').innerHTML = `
     <div class="sim-card" style="border-top:3px solid var(--blue)">
@@ -1567,6 +1579,11 @@ function simUpdate(days) {
         <span style="color:var(--muted)">El grupo protege</span>
         <strong style="color:var(--blue)">${fmt(fondoParcial)}</strong>
       </div>
+      <div style="margin-top:16px;padding:14px 16px;background:rgba(94,186,255,.08);border:1px solid rgba(94,186,255,.25);border-radius:10px;text-align:center">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">podéis aguantar</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:32px;font-weight:800;color:var(--blue);line-height:1">${resistenciaParcial}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">más de huelga gracias al reparto</div>
+      </div>
     </div>
     <div class="sim-card" style="border-top:3px solid var(--red)">
       <h4>Huelga Completa · 8h × ${d} día${d>1?'s':''}</h4>
@@ -1584,10 +1601,13 @@ function simUpdate(days) {
         <span style="color:var(--muted)">El grupo protege</span>
         <strong style="color:var(--blue)">${fmt(c.fundFull*d)}</strong>
       </div>
+      <div style="margin-top:16px;padding:14px 16px;background:rgba(94,186,255,.08);border:1px solid rgba(94,186,255,.25);border-radius:10px;text-align:center">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">podéis aguantar</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:32px;font-weight:800;color:var(--blue);line-height:1">${resistenciaFull}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">más de huelga gracias al reparto</div>
+      </div>
     </div>
   `;
-
-  // Chart
   const maxV = Math.max(sinParcial, sinFull) * 1.15;
   document.getElementById('sim-chart').innerHTML = `
     <table style="width:100%;border-collapse:collapse;table-layout:fixed">
@@ -2041,7 +2061,7 @@ async function pinEntrar() {
   if (!pinIntroducido) return;
 
   const btn = document.getElementById('btn-pin-entrar');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
 
   try {
     const doc = await awGetGrupo(lsGrupoSeleccionado.id);
