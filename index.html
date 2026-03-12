@@ -2194,14 +2194,14 @@ async function nombreConfirmar() {
 
   const nombreNorm = normName(nombre);
 
-  // Exact match
+  // Match exacto (mismo nombre normalizado) → reclamar identidad sin preguntar
   const exacto = _docMiembros.find(m => normName(m.nombre) === nombreNorm);
   if (exacto) {
-    mostrarSugerencia(exacto, nombre);
+    await reclamarIdentidad(exacto.nombre);
     return;
   }
 
-  // Similar match (Levenshtein ≤ 2)
+  // Match similar (Levenshtein ≤ 2, ej: "Juan sanchez" vs "Juan Sánchez") → preguntar
   const similar = _docMiembros.find(m => levenshtein(normName(m.nombre), nombreNorm) <= 2);
   if (similar) {
     mostrarSugerencia(similar, nombre);
@@ -2357,11 +2357,14 @@ async function lsCrearGrupo() {
 function lsEntrarNuevo() {
   const m = document.getElementById('nombre-modal');
   if (m) {
-    m.style.display = 'flex';
-    setTimeout(() => {
-      const inp = document.getElementById('nombre-input');
-      if (inp) inp.focus();
-    }, 150);
+    // Al entrar a un grupo NUEVO, limpiar _docMiembros para evitar sugerencias
+    // falsas de miembros de un grupo anterior visitado en la misma sesión.
+    _docMiembros = [];
+    document.getElementById('nombre-input').value = '';
+    const errEl = document.getElementById('nombre-modal-error');
+    if (errEl) { errEl.style.display = 'none'; errEl.innerHTML = ''; }
+    m.classList.add('open');
+    setTimeout(() => document.getElementById('nombre-input').focus(), 150);
   }
 }
 
