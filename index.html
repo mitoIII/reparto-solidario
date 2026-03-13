@@ -251,7 +251,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
           <div style="font-size:12px;color:var(--muted);margin-bottom:6px">✅ Grupo creado. Tu código secreto es:</div>
           <div id="ls-codigo-generado" style="font-size:28px;font-weight:800;color:var(--gold);letter-spacing:3px"></div>
           <div style="font-size:11px;color:var(--muted);margin-top:6px">Comparte este código con tus compañeros</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:8px">Introduciéndote en el sistema...</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:10px">Un momento, abriendo identificación...</div>
         </div>
         <div id="ls-crear-form">
           <div style="margin-bottom:12px">
@@ -566,10 +566,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div id="nombre-modal" class="modal-bg" style="z-index:10001">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:100%;max-width:340px;text-align:center">
     <div style="font-size:36px;margin-bottom:10px">👋</div>
-    <div style="font-size:17px;font-weight:700;margin-bottom:6px" id="nombre-modal-titulo">¡Bienvenido!</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:20px" id="nombre-modal-desc">¿Cómo te llamas? Así tus compañeros sabrán quién eres.</div>
-    <input id="nombre-input" type="text" placeholder="Tu nombre completo" style="margin-bottom:12px" oninput="const e=document.getElementById('nombre-modal-error');if(e)e.style.display='none'">
-    <div id="nombre-modal-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px;text-align:left"></div>
+    <div id="nombre-modal-titulo" style="font-size:17px;font-weight:700;margin-bottom:6px">¡Bienvenido!</div>
+    <div id="nombre-modal-desc" style="font-size:13px;color:var(--muted);margin-bottom:20px">¿Cómo te llamas? Así tus compañeros sabrán quién eres.</div>
+    <input id="nombre-input" type="text" placeholder="Tu nombre completo" style="margin-bottom:12px" oninput="const e=document.getElementById('nombre-modal-error');if(e){e.style.display='none';e.innerHTML=''}">
+    <div id="nombre-modal-error" style="display:none;font-size:12px;margin-bottom:10px;text-align:left;background:rgba(245,197,24,.07);border:1px solid rgba(245,197,24,.25);border-radius:6px;padding:10px 12px"></div>
     <button class="btn btn-primary" style="width:100%" id="btn-nombre-confirmar" onclick="nombreConfirmar()">Entrar ✊</button>
   </div>
 </div>
@@ -1982,7 +1982,7 @@ function awStartPolling() {
           render();
           // Show subtle sync indicator
           const ind = document.getElementById('sync-indicator');
-          if (ind) { ind.textContent = '↻ sincronizado'; ind.style.color = 'var(--green)'; ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',1500); }
+          if (ind) { ind.textContent='↻ sincronizado'; ind.style.color='var(--green)'; ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',1500); }
         }
       }
     } catch(e) { console.warn('Poll error:', e); }
@@ -1992,351 +1992,413 @@ function awStartPolling() {
 // ══════════════════════════════════════════════════════════════
 // LOGIN SCREEN LOGIC
 // ══════════════════════════════════════════════════════════════
-let lsGrupoSeleccionado = null;
-let _nuevoDocId = null;
-let _nuevoNombreGrupo = null;
 
+// ── Variables de estado del login ────────────────────────────
+let _loginCtx = {
+  docId: null,          // ID del documento Appwrite del grupo seleccionado
+  nombreGrupo: null,    // Nombre del grupo
+  miembros: [],         // Lista de miembros ya registrados [{nombre, esAdmin, fecha}]
+  datos: null,          // JSON de datos (workers, convenios…) del grupo
+  esAdmin: false,       // Rol que tendrá el usuario al entrar
+};
+
+// ── Utilidades ────────────────────────────────────────────────
+
+// Clave localStorage para guardar el usuario de un grupo concreto
+function lsUserKey(docId) { return 'rsuser-' + docId; }
+
+// Genera código tipo "VIL-4829" a partir del nombre del centro
 function generarCodigo(nombre) {
   const prefix = nombre.trim().toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,3).padEnd(3,'X');
-  return prefix + '-' + Math.floor(1000 + Math.random()*9000);
+  return prefix + '-' + Math.floor(1000 + Math.random() * 9000);
 }
 
-function lsUserKey(docId) { return 'rsuser-' + docId; }
+// Distancia Levenshtein (para detectar typos entre nombres)
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) =>
+    Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0)
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
+  return dp[m][n];
+}
+
+// Comprueba si dos nombres son "el mismo" (exacto o typo ≤ 2 caracteres)
+function nombresSimilares(a, b) {
+  const na = norm(a), nb = norm(b);
+  return na === nb || levenshtein(na, nb) <= 2;
+}
+
+// ── Cambio de vista en la pantalla de login ───────────────────
 
 function lsShowBuscar() {
   document.getElementById('ls-vista-buscar').style.display = 'block';
-  document.getElementById('ls-vista-crear').style.display = 'none';
+  document.getElementById('ls-vista-crear').style.display  = 'none';
 }
+
 function lsShowCrear() {
   document.getElementById('ls-vista-buscar').style.display = 'none';
-  document.getElementById('ls-vista-crear').style.display = 'block';
+  document.getElementById('ls-vista-crear').style.display  = 'block';
   setTimeout(() => document.getElementById('ls-nombre').focus(), 100);
 }
 
+// ── PASO 1: Buscar grupo por código ──────────────────────────
+// El usuario escribe el código (ej: "VIL-4829"), se busca en Appwrite
+// y se muestra el nombre del grupo con un botón "Entrar →"
 async function lsBuscarGrupo() {
-  const codigo  = document.getElementById('ls-codigo-buscar').value.trim().toUpperCase();
-  const resEl   = document.getElementById('ls-buscar-resultado');
-  if (!codigo) { resEl.innerHTML = '<span style="color:var(--red);font-size:12px">Escribe el código del grupo</span>'; return; }
+  const codigo = document.getElementById('ls-codigo-buscar').value.trim().toUpperCase();
+  const resEl  = document.getElementById('ls-buscar-resultado');
+
+  if (!codigo) {
+    resEl.innerHTML = '<span style="color:var(--red);font-size:12px">Escribe el código del grupo</span>';
+    return;
+  }
+
   resEl.innerHTML = '<span style="color:var(--muted);font-size:12px">Buscando...</span>';
+
   try {
-    // Try direct query first (works if Appwrite has index on 'codigo')
-    // Fallback: list all and filter client-side
     let g = null;
+    // Intento 1: query directa por índice (rápido si Appwrite tiene índice en 'codigo')
     try {
-      const res = await awDB.listDocuments(AW_DB, AW_COL, [Appwrite.Query.equal('codigo',[codigo]), Appwrite.Query.limit(1)]);
+      const res = await awDB.listDocuments(AW_DB, AW_COL, [
+        Appwrite.Query.equal('codigo', [codigo]),
+        Appwrite.Query.limit(1)
+      ]);
       if (res.documents.length) g = res.documents[0];
     } catch(e) {
-      // Index might not exist — fall back to listing all docs
+      // Fallback: listar todos y filtrar en cliente (sin índice)
       const res = await awDB.listDocuments(AW_DB, AW_COL, [Appwrite.Query.limit(100)]);
       g = res.documents.find(d => (d.codigo || '').toUpperCase() === codigo) || null;
     }
 
-    if (!g) { resEl.innerHTML = '<span style="color:var(--red);font-size:12px">❌ Código no encontrado</span>'; return; }
-    window._grupoEncontrado = g;
-    resEl.innerHTML = `<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:4px">
-      <div><div style="font-weight:700;font-size:15px">${g.nombre}</div><div style="font-size:11px;color:var(--muted)">Código: ${g.codigo}</div></div>
-      <button class="btn btn-primary" style="padding:8px 16px" id="btn-entrar-grupo">Entrar →</button>
-    </div>`;
-    document.getElementById('btn-entrar-grupo').addEventListener('click', function() {
-      lsSeleccionar(window._grupoEncontrado.$id, window._grupoEncontrado.nombre);
+    if (!g) {
+      resEl.innerHTML = '<span style="color:var(--red);font-size:12px">❌ Código no encontrado</span>';
+      return;
+    }
+
+    // Mostrar resultado con botón de entrar
+    resEl.innerHTML = `
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;
+                  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+        <div>
+          <div style="font-weight:700;font-size:15px">${g.nombre}</div>
+          <div style="font-size:11px;color:var(--muted)">Código: ${g.codigo}</div>
+        </div>
+        <button class="btn btn-primary" style="padding:8px 16px" id="btn-entrar-grupo">Entrar →</button>
+      </div>`;
+
+    document.getElementById('btn-entrar-grupo').addEventListener('click', () => {
+      _abrirModalPin(g.$id, g.nombre);
     });
+
   } catch(e) {
     resEl.innerHTML = '<span style="color:var(--red);font-size:12px">⚠ Error de conexión. Comprueba tu red e inténtalo de nuevo.</span>';
   }
 }
 
-function lsSeleccionar(id, nombre) {
-  lsGrupoSeleccionado = { id, nombre };
-  document.getElementById('pin-modal-nombre').textContent = nombre;
-  document.getElementById('pin-input').value = '';
-  document.getElementById('pin-error').style.display = 'none';
+// ── PASO 2: Modal de PIN ──────────────────────────────────────
+// Se abre al pulsar "Entrar →" en el resultado de búsqueda.
+// El usuario introduce el PIN del grupo. Si es correcto:
+//   - Si este dispositivo ya tiene sesión guardada → entra directo
+//   - Si es la primera vez → abre el modal de nombre
+
+function _abrirModalPin(docId, nombreGrupo) {
+  _loginCtx.docId       = docId;
+  _loginCtx.nombreGrupo = nombreGrupo;
+  document.getElementById('pin-modal-nombre').textContent = nombreGrupo;
+  document.getElementById('pin-input').value              = '';
+  document.getElementById('pin-error').style.display      = 'none';
   document.getElementById('pin-modal').classList.add('open');
   setTimeout(() => document.getElementById('pin-input').focus(), 100);
 }
 
 function pinCerrar() {
   document.getElementById('pin-modal').classList.remove('open');
-  lsGrupoSeleccionado = null;
+  _loginCtx.docId = null;
 }
 
 async function pinEntrar() {
   const pinIntroducido = document.getElementById('pin-input').value.trim();
-  const errEl = document.getElementById('pin-error');
+  const errEl          = document.getElementById('pin-error');
   if (!pinIntroducido) return;
 
   const btn = document.getElementById('btn-pin-entrar');
-  if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Comprobando...'; }
 
   try {
-    const doc = await awGetGrupo(lsGrupoSeleccionado.id);
+    // Obtener documento del grupo desde Appwrite para verificar PIN
+    const doc = await awGetGrupo(_loginCtx.docId);
+
     if (pinIntroducido !== doc.pin) {
-      errEl.textContent = 'PIN incorrecto';
-      errEl.style.display = 'block';
+      errEl.textContent              = 'PIN incorrecto';
+      errEl.style.display            = 'block';
       document.getElementById('pin-input').value = '';
       if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
       return;
     }
+
+    // PIN correcto — cerrar modal de PIN
     errEl.style.display = 'none';
     document.getElementById('pin-modal').classList.remove('open');
+    if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+
     window.AW_DOC_ID = doc.$id;
 
-    // Check if admin (creator stored in miembros)
+    // Parsear miembros del grupo
     let miembros = [];
     try { miembros = JSON.parse(doc.miembros || '[]'); } catch(e) { miembros = []; }
-    const adminEntry = miembros.find(m => m.esAdmin);
 
-    // Check if this device already has a user for this group
-    const userGuardado = localStorage.getItem(lsUserKey(doc.$id));
-    if (userGuardado) {
-      const u = JSON.parse(userGuardado);
-      window.AW_IS_ADMIN = u.esAdmin || false;
+    // ¿Este dispositivo ya tiene sesión guardada para este grupo?
+    const sesionGuardada = localStorage.getItem(lsUserKey(doc.$id));
+    if (sesionGuardada) {
+      // Auto-restaurar sesión sin pedir nombre de nuevo
+      const u = JSON.parse(sesionGuardada);
+      window.AW_IS_ADMIN  = u.esAdmin || false;
       window.AW_USER_NAME = u.nombre;
       S = loadState(doc.datos || null);
-      lsEntrar(doc.nombre);
-    } else {
-      // Primera vez — preguntar nombre
-      window.AW_IS_ADMIN = !adminEntry;
-      _nuevoDocId = doc.$id;
-      _nuevoNombreGrupo = doc.nombre;
-      _docMiembros = miembros;
-      _docDatos = doc.datos;
-      document.getElementById('nombre-modal-titulo').textContent = '¡Bienvenido!';
-      document.getElementById('nombre-modal-desc').textContent = '¿Cómo te llamas? Así tus compañeros sabrán quién eres.';
-      document.getElementById('nombre-modal').classList.add('open');
-      setTimeout(() => document.getElementById('nombre-input').focus(), 100);
+      window._miembrosCache = miembros;
+      _lsEntrar(doc.nombre);
+      return;
     }
+
+    // Primera vez en este dispositivo — guardar contexto y pedir nombre
+    _loginCtx.miembros   = miembros;
+    _loginCtx.datos      = doc.datos;
+    // El rol por defecto es lector si ya hay algún admin; admin si el grupo está vacío de admins
+    _loginCtx.esAdmin    = !miembros.some(m => m.esAdmin);
+
+    _abrirModalNombre('¡Bienvenido!', '¿Cómo te llamas? Así tus compañeros sabrán quién eres.');
+
   } catch(e) {
-    errEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
+    errEl.textContent   = 'Error de conexión. Inténtalo de nuevo.';
     errEl.style.display = 'block';
     if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
   }
 }
 
-let _docMiembros = [];
-let _docDatos = null;
+// ── PASO 3: Modal de nombre ───────────────────────────────────
+// Se abre en dos situaciones:
+//   A) Primera vez que alguien entra a un grupo existente
+//   B) Al crear un grupo nuevo (el creador también debe identificarse)
+//
+// Lógica al confirmar el nombre:
+//   1. Coincidencia exacta (norm) con miembro existente → reclamar identidad directamente
+//   2. Nombre similar (typo ≤ 2) con miembro existente → preguntar "¿eres tú?"
+//   3. Nombre igual o similar a un worker del grupo → preguntar "¿eres tú?"
+//   4. Nombre completamente nuevo → registrar como nuevo miembro
 
-// ── Levenshtein distance ─────────────────────────────────────
-function levenshtein(a, b) {
-  const m = a.length, n = b.length;
-  const dp = Array.from({length: m+1}, (_,i) => Array.from({length: n+1}, (_,j) => i===0?j:j===0?i:0));
-  for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
-    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j-1],dp[i-1][j],dp[i][j-1]);
-  return dp[m][n];
+function _abrirModalNombre(titulo, descripcion) {
+  document.getElementById('nombre-modal-titulo').textContent      = titulo;
+  document.getElementById('nombre-modal-desc').textContent        = descripcion;
+  document.getElementById('nombre-input').value                   = '';
+  document.getElementById('nombre-modal-error').style.display     = 'none';
+  document.getElementById('nombre-modal-error').innerHTML         = '';
+  const btn = document.getElementById('btn-nombre-confirmar');
+  if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
+  document.getElementById('nombre-modal').classList.add('open');
+  setTimeout(() => document.getElementById('nombre-input').focus(), 100);
 }
 
 async function nombreConfirmar() {
   const nombre = document.getElementById('nombre-input').value.trim();
   if (!nombre) { document.getElementById('nombre-input').focus(); return; }
 
-  const btn = document.getElementById('btn-nombre-confirmar');
+  const btn   = document.getElementById('btn-nombre-confirmar');
+  const errEl = document.getElementById('nombre-modal-error');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
+  errEl.style.display = 'none';
 
   try {
     const nombreNorm = norm(nombre);
 
-    // 1. Exact match en _docMiembros → reclamar sesión existente
-    const exacto = _docMiembros.find(m => norm(m.nombre) === nombreNorm);
-    if (exacto) {
-      await reclamarIdentidad(exacto.nombre);
+    // ── Caso 1: Coincidencia exacta con miembro ya registrado ─
+    // Ejemplo: ya existe "María García" y escriben "María García" o "maria garcia"
+    const miembroExacto = _loginCtx.miembros.find(m => norm(m.nombre) === nombreNorm);
+    if (miembroExacto) {
+      await _reclamarIdentidad(miembroExacto.nombre);
       return;
     }
 
-    // 2. Similar en _docMiembros (typo ≤ 2) → sugerir que es la misma persona
-    const similar = _docMiembros.find(m => levenshtein(norm(m.nombre), nombreNorm) <= 2);
-    if (similar) {
+    // ── Caso 2: Nombre similar (typo) a miembro ya registrado ─
+    // Ejemplo: ya existe "María" y escriben "Maria" o "Maira"
+    const miembroSimilar = _loginCtx.miembros.find(m => nombresSimilares(m.nombre, nombre));
+    if (miembroSimilar) {
       if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
-      mostrarSugerencia(similar, nombre);
+      _mostrarPregunta(
+        errEl,
+        `¿Quisiste decir <strong style="color:var(--gold)">${miembroSimilar.nombre}</strong>?`,
+        () => _reclamarIdentidad(miembroSimilar.nombre),
+        () => { errEl.style.display = 'none'; _registrarNuevoMiembro(nombre); }
+      );
       return;
     }
 
-    // 3. Colisión de nombre con workers del grupo — leer directo de _docDatos
-    // (S todavía no está cargado con los datos de este grupo en este punto)
+    // ── Caso 3: Nombre igual o similar a un worker del grupo ──
+    // Ejemplo: el admin añadió "José López" y él entra escribiendo "Jose Lopez"
     let grupoWorkers = [];
     try {
-      const datosGrupo = _docDatos ? JSON.parse(_docDatos) : null;
-      grupoWorkers = (datosGrupo && datosGrupo.workers) ? datosGrupo.workers : [];
+      const datosGrupo = _loginCtx.datos ? JSON.parse(_loginCtx.datos) : null;
+      grupoWorkers     = (datosGrupo && datosGrupo.workers) ? datosGrupo.workers : [];
     } catch(e) { grupoWorkers = []; }
 
-    const workerMatch = grupoWorkers.find(w =>
-      norm(w.name) === nombreNorm || levenshtein(norm(w.name), nombreNorm) <= 2
-    );
-    if (workerMatch) {
+    const workerSimilar = grupoWorkers.find(w => nombresSimilares(w.name, nombre));
+    if (workerSimilar) {
       if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
-      mostrarColision(workerMatch.name, nombre);
+      _mostrarPregunta(
+        errEl,
+        `⚠️ Ya hay un compañero llamado <strong style="color:var(--gold)">${workerSimilar.name}</strong> en este grupo. ¿Eres tú?`,
+        () => _reclamarIdentidad(workerSimilar.name),
+        () => { errEl.style.display = 'none'; _registrarNuevoMiembro(nombre); }
+      );
       return;
     }
 
-    await _guardarNuevoMiembro(nombre);
+    // ── Caso 4: Nombre completamente nuevo ────────────────────
+    await _registrarNuevoMiembro(nombre);
+
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
-    const errEl = document.getElementById('nombre-modal-error');
-    if (errEl) { errEl.textContent = 'Error al guardar. Inténtalo de nuevo.'; errEl.style.display = 'block'; }
+    errEl.textContent   = 'Error al guardar. Inténtalo de nuevo.';
+    errEl.style.display = 'block';
   }
 }
 
-function mostrarSugerencia(miembro, nombreEscrito) {
-  const errEl = document.getElementById('nombre-modal-error');
-  if (!errEl) return;
+// Muestra dos botones de confirmación dentro del área de error del modal de nombre
+// onSi: callback si pulsa "Sí, soy yo"
+// onNo: callback si pulsa "No, soy otro"
+function _mostrarPregunta(errEl, htmlMensaje, onSi, onNo) {
   errEl.style.display = 'block';
-  errEl.innerHTML = '<div style="margin-bottom:8px">¿Quisiste decir <strong style="color:var(--gold)">' + miembro.nombre + '</strong>?</div>'
-    + '<div style="display:flex;gap:8px">'
-    + '<button class="btn btn-primary btn-sm" style="flex:1" id="btn-si-soy-yo">Sí, soy yo ✓</button>'
-    + '<button class="btn btn-ghost btn-sm" style="flex:1" id="btn-no-soy-otro">No, soy otro</button>'
-    + '</div>';
-  document.getElementById('btn-si-soy-yo').onclick = function() { reclamarIdentidad(miembro.nombre); };
-  document.getElementById('btn-no-soy-otro').onclick = function() {
-    errEl.style.display = 'none';
-    _guardarNuevoMiembro(nombreEscrito);
-  };
-}
-
-function mostrarColision(nombreExistente, nombreEscrito) {
-  const errEl = document.getElementById('nombre-modal-error');
-  if (!errEl) return;
-  errEl.style.display = 'block';
-  errEl.innerHTML = '<div style="margin-bottom:8px">⚠️ Ya hay un compañero llamado <strong style="color:var(--gold)">' + nombreExistente + '</strong> en este grupo. ¿Eres tú?</div>'
-    + '<div style="display:flex;gap:8px">'
-    + '<button class="btn btn-primary btn-sm" style="flex:1" id="btn-colision-si">Sí, soy yo ✓</button>'
-    + '<button class="btn btn-ghost btn-sm" style="flex:1" id="btn-colision-no">No, soy otro</button>'
-    + '</div>';
-  document.getElementById('btn-colision-si').onclick = function() { reclamarIdentidad(nombreExistente); };
-  document.getElementById('btn-colision-no').onclick = function() {
-    errEl.style.display = 'none';
-    _guardarNuevoMiembro(nombreEscrito);
-  };
-}
-
-
-// Colisión fuzzy detectada DESPUÉS de ya haber guardado el miembro — mostrar aviso emergente
-function _mostrarColisionWorkerFinal(nombreWorker, nombreEscrito) {
-  const ov = document.createElement('div');
-  ov.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px';
-  ov.innerHTML = `
-    <div style="background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:28px;max-width:360px;width:100%;text-align:center">
-      <div style="font-size:36px;margin-bottom:10px">⚠️</div>
-      <div style="font-size:16px;font-weight:700;margin-bottom:8px">¿Eres tú?</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:18px">Parece que ya hay un compañero llamado <strong style="color:var(--gold)">${nombreWorker}</strong> en el grupo. ¿Eres la misma persona?</div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-primary" style="flex:1" id="_cwf-si">Sí, soy yo ✓</button>
-        <button class="btn btn-ghost" style="flex:1" id="_cwf-no">No, soy otro</button>
-      </div>
+  errEl.innerHTML = `
+    <div style="margin-bottom:10px">${htmlMensaje}</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary btn-sm" style="flex:1" id="_preg-si">Sí, soy yo ✓</button>
+      <button class="btn btn-ghost btn-sm"   style="flex:1" id="_preg-no">No, soy otro</button>
     </div>`;
-  document.body.appendChild(ov);
-
-  document.getElementById('_cwf-si').onclick = async function() {
-    ov.remove();
-    window.AW_USER_NAME = nombreWorker;
-    // Corregir el nombre en miembros si fue guardado con el nombre escrito
-    const idx = _docMiembros.findIndex(m => norm(m.nombre) === norm(nombreEscrito));
-    if (idx >= 0) {
-      _docMiembros[idx].nombre = nombreWorker;
-      try {
-        await awDB.updateDocument(AW_DB, AW_COL, _nuevoDocId, { miembros: JSON.stringify(_docMiembros) });
-      } catch(e) { console.warn('Could not fix member name:', e); }
-    }
-    localStorage.setItem(lsUserKey(_nuevoDocId), JSON.stringify({ nombre: nombreWorker, esAdmin: window.AW_IS_ADMIN }));
-    localStorage.setItem('rs-session', JSON.stringify({ docId: _nuevoDocId, nombre: _nuevoNombreGrupo, esAdmin: window.AW_IS_ADMIN, userName: nombreWorker }));
-    window._miembrosCache = _docMiembros;
-    lsEntrar(_nuevoNombreGrupo);
-  };
-  document.getElementById('_cwf-no').onclick = function() {
-    ov.remove();
-    lsEntrar(_nuevoNombreGrupo);
-  };
+  document.getElementById('_preg-si').onclick = onSi;
+  document.getElementById('_preg-no').onclick = onNo;
 }
 
-async function reclamarIdentidad(nombre) {
-  // User claims to be an existing member — restore their session
-  // norm() is global
-  const m = _docMiembros.find(x => norm(x.nombre) === norm(nombre));
-  const esAdmin = m ? m.esAdmin : false;
+// ── Reclamar identidad de un miembro o worker existente ───────
+// Se usa cuando el usuario dice "Sí, soy yo" o cuando el nombre coincide exactamente.
+// Si el nombre viene de un worker (no de miembros), lo añade a miembros.
+async function _reclamarIdentidad(nombre) {
+  // Buscar en miembros para obtener su rol
+  const m      = _loginCtx.miembros.find(x => norm(x.nombre) === norm(nombre));
+  const esAdmin = m ? m.esAdmin : _loginCtx.esAdmin;
 
   window.AW_USER_NAME = nombre;
-  window.AW_IS_ADMIN = esAdmin;
+  window.AW_IS_ADMIN  = esAdmin;
 
-  // Si no estaba en _docMiembros (venía solo de S.workers), añadirlo ahora
+  // Si no estaba en miembros (solo existía como worker), registrarlo ahora
   if (!m) {
-    const nuevoMiembro = { nombre, esAdmin: false, fecha: new Date().toISOString() };
-    _docMiembros.push(nuevoMiembro);
+    const nuevoMiembro = { nombre, esAdmin, fecha: new Date().toISOString() };
+    _loginCtx.miembros.push(nuevoMiembro);
     try {
-      await awDB.updateDocument(AW_DB, AW_COL, _nuevoDocId, { miembros: JSON.stringify(_docMiembros) });
-    } catch(e) { console.warn('Could not register member:', e); }
+      await awDB.updateDocument(AW_DB, AW_COL, _loginCtx.docId, {
+        miembros: JSON.stringify(_loginCtx.miembros)
+      });
+    } catch(e) { console.warn('No se pudo registrar el miembro:', e); }
   }
 
-  // Save to localStorage so next time auto-login works
-  localStorage.setItem(lsUserKey(_nuevoDocId), JSON.stringify({ nombre, esAdmin }));
+  // Guardar sesión en localStorage para auto-login futuro
+  localStorage.setItem(lsUserKey(_loginCtx.docId), JSON.stringify({ nombre, esAdmin }));
   localStorage.setItem('rs-session', JSON.stringify({
-    docId: _nuevoDocId,
-    nombre: _nuevoNombreGrupo,
+    docId:    _loginCtx.docId,
+    nombre:   _loginCtx.nombreGrupo,
     esAdmin,
     userName: nombre
   }));
 
   document.getElementById('nombre-modal').classList.remove('open');
-  S = loadState(_docDatos || null);
-  window._miembrosCache = _docMiembros;
+  S = loadState(_loginCtx.datos || null);
+  window._miembrosCache = _loginCtx.miembros;
 
-  lsEntrar(_nuevoNombreGrupo);
+  _lsEntrar(_loginCtx.nombreGrupo);
 }
 
-async function _guardarNuevoMiembro(nombre) {
+// ── Registrar miembro completamente nuevo ─────────────────────
+// Se llama cuando el nombre no coincide con ningún miembro ni worker.
+// Crea entrada en la lista de miembros de Appwrite.
+// Si tampoco existe como worker, lo añade con situación 'SA' (sin asignar).
+async function _registrarNuevoMiembro(nombre) {
   window.AW_USER_NAME = nombre;
 
-  const nuevoMiembro = { nombre, esAdmin: window.AW_IS_ADMIN, fecha: new Date().toISOString() };
-  _docMiembros.push(nuevoMiembro);
+  // Añadir a la lista de miembros con el rol calculado en _loginCtx.esAdmin
+  const nuevoMiembro = { nombre, esAdmin: _loginCtx.esAdmin, fecha: new Date().toISOString() };
+  _loginCtx.miembros.push(nuevoMiembro);
 
-  localStorage.setItem(lsUserKey(_nuevoDocId), JSON.stringify({ nombre, esAdmin: window.AW_IS_ADMIN }));
+  // Guardar sesión local antes de la llamada a Appwrite (por si falla la red)
+  localStorage.setItem(lsUserKey(_loginCtx.docId), JSON.stringify({
+    nombre,
+    esAdmin: _loginCtx.esAdmin
+  }));
+  localStorage.setItem('rs-session', JSON.stringify({
+    docId:    _loginCtx.docId,
+    nombre:   _loginCtx.nombreGrupo,
+    esAdmin:  _loginCtx.esAdmin,
+    userName: nombre
+  }));
 
+  // Sincronizar miembros con Appwrite
   try {
-    await awDB.updateDocument(AW_DB, AW_COL, _nuevoDocId, { miembros: JSON.stringify(_docMiembros) });
-    window._miembrosCache = _docMiembros;
-  } catch(e) { console.warn('Could not save member:', e); }
-
-  S = loadState(_docDatos || null);
-
-  // Buscar duplicado fuzzy en workers (norm + Levenshtein ≤ 2)
-  const nombreNormW = norm(nombre);
-  const workerDup = S.workers.find(w =>
-    norm(w.name) === nombreNormW || levenshtein(norm(w.name), nombreNormW) <= 2
-  );
-
-  if (workerDup && norm(workerDup.name) !== nombreNormW) {
-    // Colisión fuzzy no detectada antes (typo leve) — preguntar al usuario
-    document.getElementById('nombre-modal').classList.remove('open');
-    _mostrarColisionWorkerFinal(workerDup.name, nombre);
-    return;
-  }
+    await awDB.updateDocument(AW_DB, AW_COL, _loginCtx.docId, {
+      miembros: JSON.stringify(_loginCtx.miembros)
+    });
+    window._miembrosCache = _loginCtx.miembros;
+  } catch(e) { console.warn('No se pudo guardar el miembro en Appwrite:', e); }
 
   document.getElementById('nombre-modal').classList.remove('open');
+  S = loadState(_loginCtx.datos || null);
 
-  if (!workerDup) {
-    S.workers.push({ id: Date.now(), name: nombre, conv: S.convenios.length > 0 ? S.convenios[0].id : null, sit: 'SA' });
-    // Guardar inmediatamente en Appwrite (sin debounce) para que otros usuarios vean al nuevo miembro
+  // Añadir como worker si no existe ya (comparando con norm + levenshtein)
+  const yaExisteWorker = S.workers.find(w => nombresSimilares(w.name, nombre));
+  if (!yaExisteWorker) {
+    S.workers.push({
+      id:        Date.now(),
+      name:      nombre,
+      conv:      S.convenios.length > 0 ? S.convenios[0].id : null,
+      sit:       'SA',
+      paid:      false,
+      collected: false
+    });
+    // Guardar inmediatamente (sin debounce) para que otros usuarios vean al nuevo
     localStorage.setItem(lsDataKey(), JSON.stringify(S));
     if (window.AW_DOC_ID) {
       awSaveData(JSON.stringify(S)).catch(e => console.warn('Appwrite sync error:', e));
     }
   }
 
-  lsEntrar(_nuevoNombreGrupo);
+  _lsEntrar(_loginCtx.nombreGrupo);
 }
 
-function lsEntrar(nombre) {
-  // Save session for auto-login on reload
+// ── Entrar a la app ───────────────────────────────────────────
+// Punto final de todos los flujos de login. Oculta la pantalla de
+// login, muestra la app, aplica el rol y arranca el polling.
+function _lsEntrar(nombreGrupo) {
+  // Asegurar que la sesión está guardada con los datos más recientes
   localStorage.setItem('rs-session', JSON.stringify({
-    docId: window.AW_DOC_ID,
-    nombre: nombre,
-    esAdmin: window.AW_IS_ADMIN,
+    docId:    window.AW_DOC_ID,
+    nombre:   nombreGrupo,
+    esAdmin:  window.AW_IS_ADMIN,
     userName: window.AW_USER_NAME || null
   }));
+
   document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('main-app').style.display = 'flex';
-  document.getElementById('sidebar-grupo-nombre').textContent = nombre;
+  document.getElementById('main-app').style.display     = 'flex';
+  document.getElementById('sidebar-grupo-nombre').textContent = nombreGrupo;
+
   applyRoleUI();
   render();
+
+  // Tutorial de bienvenida solo para el primer admin del grupo
   if (window.AW_IS_ADMIN && S.workers.length === 0 && !localStorage.getItem('onboarding-done')) {
     setTimeout(() => showOnboarding(), 600);
   }
+
   go('resumen');
   awStartPolling();
 }
@@ -2347,70 +2409,91 @@ function applyRoleUI() {
     badge.textContent = window.AW_IS_ADMIN ? '👑 Admin' : '👁 Lector';
     badge.style.color = window.AW_IS_ADMIN ? 'var(--gold)' : '#4da6ff';
   }
-  // Hide admin-only buttons for readers
-  const adminBtns = document.querySelectorAll('.admin-only');
-  adminBtns.forEach(el => { el.style.display = window.AW_IS_ADMIN ? '' : 'none'; });
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = window.AW_IS_ADMIN ? '' : 'none';
+  });
 }
 
+// ── Cerrar sesión ─────────────────────────────────────────────
 function cerrarSesion() {
   if (awPollInterval) clearInterval(awPollInterval);
   localStorage.removeItem('rs-session');
-  window.AW_DOC_ID = null;
-  window.AW_IS_ADMIN = false;
+  window.AW_DOC_ID    = null;
+  window.AW_IS_ADMIN  = false;
   window.AW_USER_NAME = null;
-  document.getElementById('main-app').style.display = 'none';
+  _loginCtx           = { docId: null, nombreGrupo: null, miembros: [], datos: null, esAdmin: false };
+  document.getElementById('main-app').style.display    = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  lsGrupoSeleccionado = null;
   lsShowBuscar();
-  document.getElementById('ls-codigo-buscar').value = '';
+  document.getElementById('ls-codigo-buscar').value        = '';
   document.getElementById('ls-buscar-resultado').innerHTML = '';
 }
 
+// ── CREAR GRUPO NUEVO ─────────────────────────────────────────
+// Flujo:
+//   1. Validar nombre del centro y PIN
+//   2. Crear documento en Appwrite con datos vacíos
+//   3. Mostrar el código generado
+//   4. Pedir nombre al creador (modal de nombre) → él será el primer admin
 
 async function lsCrearGrupo() {
   const nombre = document.getElementById('ls-nombre').value.trim();
   const pin    = document.getElementById('ls-pin-admin').value.trim();
   const errEl  = document.getElementById('ls-crear-error');
 
-  if (!nombre) { errEl.textContent='Escribe el nombre del centro'; errEl.style.display='block'; return; }
-  if (!/^\d{4}$/.test(pin)) { errEl.textContent='El PIN debe ser exactamente 4 dígitos'; errEl.style.display='block'; return; }
+  if (!nombre) {
+    errEl.textContent   = 'Escribe el nombre del centro';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!/^\d{4}$/.test(pin)) {
+    errEl.textContent   = 'El PIN debe ser exactamente 4 dígitos';
+    errEl.style.display = 'block';
+    return;
+  }
   errEl.style.display = 'none';
 
-  const codigo = generarCodigo(nombre);
+  const btnCrear = document.querySelector('#ls-crear-form .btn-primary');
+  if (btnCrear) { btnCrear.disabled = true; btnCrear.textContent = '⏳ Creando...'; }
+
+  const codigo      = generarCodigo(nombre);
   const estadoVacio = JSON.stringify({ hours:4, simDays:2, workers:[], convenios:[], complementos:[], historial:[] });
 
   try {
-    const doc = await awDB.createDocument(AW_DB, AW_COL, Appwrite.ID.unique(), { nombre, pin, codigo, datos: estadoVacio, miembros: '[]' });
-    // Show code
-    document.getElementById('ls-crear-form').style.display = 'none';
-    document.getElementById('ls-codigo-generado').textContent = codigo;
-    document.getElementById('ls-crear-codigo-result').style.display = 'block';
-    _nuevoDocId = doc.$id;
-    _nuevoNombreGrupo = nombre;
-    _docMiembros = [];
-    _docDatos = estadoVacio;
-    window.AW_DOC_ID = doc.$id;
-    window.AW_IS_ADMIN = true;
-    S = loadState(estadoVacio);
-    // Pedir nombre al creador igual que a cualquier otro miembro
-    document.getElementById('nombre-modal-titulo').textContent = '¡Grupo creado! ¿Cómo te llamas?';
-    document.getElementById('nombre-modal-desc').textContent = 'Eres el administrador. Dinos tu nombre para identificarte.';
-    document.getElementById('nombre-modal').classList.add('open');
-    setTimeout(() => document.getElementById('nombre-input').focus(), 100);
-  } catch(e) {
-    errEl.textContent = 'Error de conexión. No se pudo crear el grupo. Inténtalo de nuevo.';
-    errEl.style.display = 'block';
-  }
-}
+    const doc = await awDB.createDocument(
+      AW_DB, AW_COL, Appwrite.ID.unique(),
+      { nombre, pin, codigo, datos: estadoVacio, miembros: '[]' }
+    );
 
-function lsEntrarNuevo() {
-  const m = document.getElementById('nombre-modal');
-  if (m) {
-    m.classList.add('open');
+    // Mostrar el código generado
+    document.getElementById('ls-crear-form').style.display          = 'none';
+    document.getElementById('ls-codigo-generado').textContent       = codigo;
+    document.getElementById('ls-crear-codigo-result').style.display = 'block';
+
+    // Preparar contexto de login para el creador (siempre admin)
+    window.AW_DOC_ID     = doc.$id;
+    window.AW_IS_ADMIN   = true;
+    _loginCtx.docId      = doc.$id;
+    _loginCtx.nombreGrupo = nombre;
+    _loginCtx.miembros   = [];
+    _loginCtx.datos      = estadoVacio;
+    _loginCtx.esAdmin    = true;   // El creador SIEMPRE es admin
+
+    S = loadState(estadoVacio);
+
+    // Pedir nombre al creador (igual que cualquier otro miembro)
+    // Pequeño delay para que el usuario vea el código antes de que aparezca el modal
     setTimeout(() => {
-      const inp = document.getElementById('nombre-input');
-      if (inp) inp.focus();
-    }, 150);
+      _abrirModalNombre(
+        '¡Grupo creado! ¿Cómo te llamas?',
+        'Eres el administrador del grupo. Dinos tu nombre para que tus compañeros te identifiquen.'
+      );
+    }, 800);
+
+  } catch(e) {
+    if (btnCrear) { btnCrear.disabled = false; btnCrear.textContent = 'Crear'; }
+    errEl.textContent   = 'Error de conexión. No se pudo crear el grupo. Inténtalo de nuevo.';
+    errEl.style.display = 'block';
   }
 }
 
@@ -2453,7 +2536,7 @@ function showOnboarding() {
 
 // Add sync indicator to logo area
 document.addEventListener('DOMContentLoaded', () => {
-  // Sync indicator
+  // Sync indicator en el sidebar
   const logo = document.querySelector('.logo');
   if (logo) {
     const ind = document.createElement('div');
@@ -2462,47 +2545,63 @@ document.addEventListener('DOMContentLoaded', () => {
     ind.textContent = '↻ sincronizado';
     logo.appendChild(ind);
   }
-  // Enter key for code search
-  const inp = document.getElementById('ls-codigo-buscar');
-  if (inp) inp.addEventListener('keydown', e => { if (e.key==='Enter') lsBuscarGrupo(); });
-  // Enter key for PIN
-  const pinInp = document.getElementById('pin-input');
-  if (pinInp) pinInp.addEventListener('keydown', e => { if (e.key==='Enter') pinEntrar(); });
-  // Enter key for nombre
-  const nomInp = document.getElementById('nombre-input');
-  if (nomInp) nomInp.addEventListener('keydown', e => { if (e.key==='Enter') nombreConfirmar(); });
 
-  // Auto-login — usar datos locales primero, sin esperar Appwrite
+  // Enter key para buscar grupo
+  const inp = document.getElementById('ls-codigo-buscar');
+  if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') lsBuscarGrupo(); });
+
+  // Enter key para PIN
+  const pinInp = document.getElementById('pin-input');
+  if (pinInp) pinInp.addEventListener('keydown', e => { if (e.key === 'Enter') pinEntrar(); });
+
+  // Enter key para nombre
+  const nomInp = document.getElementById('nombre-input');
+  if (nomInp) nomInp.addEventListener('keydown', e => { if (e.key === 'Enter') nombreConfirmar(); });
+
+  // ── Auto-login ────────────────────────────────────────────────
+  // Si hay sesión guardada en localStorage, entrar directo sin pasar por login.
+  // Cargamos datos locales primero (instantáneo) y sincronizamos con Appwrite
+  // en background 1 segundo después para no bloquear la UI.
   const sesRaw = localStorage.getItem('rs-session');
   if (sesRaw) {
     let ses = null;
     try { ses = JSON.parse(sesRaw); } catch(e) {}
     if (ses && ses.docId) {
-      window.AW_DOC_ID   = ses.docId;
-      window.AW_IS_ADMIN = ses.esAdmin;
+      window.AW_DOC_ID    = ses.docId;
+      window.AW_IS_ADMIN  = ses.esAdmin;
       window.AW_USER_NAME = ses.userName || null;
       window._miembrosCache = [];
-      S = loadState(null);
+      S = loadState(null); // carga desde localStorage
+
       document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('main-app').style.display = 'flex';
+      document.getElementById('main-app').style.display     = 'flex';
       document.getElementById('sidebar-grupo-nombre').textContent = ses.nombre || '';
       applyRoleUI();
       render();
       go('resumen');
-      // Sync with Appwrite after 1s in background
+
+      // Sincronizar con Appwrite en background (1s de delay para no bloquear)
       setTimeout(function() {
         awGetGrupo(ses.docId).then(function(doc) {
           if (doc.datos) {
             try { S = migrateState(JSON.parse(doc.datos)); render(); } catch(e) {}
           }
           try { window._miembrosCache = JSON.parse(doc.miembros || '[]'); } catch(e) {}
-        }).catch(function(e) {
-          console.warn('BG sync error:', e);
-          // Mostrar aviso sutil de que se trabaja con datos locales
+          // Mostrar indicador de sync OK
           const ind = document.getElementById('sync-indicator');
           if (ind) {
-            ind.textContent = '⚠ sin conexión · datos locales';
-            ind.style.color = 'var(--gold)';
+            ind.textContent   = '↻ sincronizado';
+            ind.style.color   = 'var(--green)';
+            ind.style.opacity = '1';
+            setTimeout(() => ind.style.opacity = '0', 1500);
+          }
+        }).catch(function(e) {
+          console.warn('BG sync error:', e);
+          // Sin red: avisar con indicador amarillo (no bloquea el uso)
+          const ind = document.getElementById('sync-indicator');
+          if (ind) {
+            ind.textContent   = '⚠ sin conexión · datos locales';
+            ind.style.color   = 'var(--gold)';
             ind.style.opacity = '1';
           }
         });
