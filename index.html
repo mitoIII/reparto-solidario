@@ -251,7 +251,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
           <div style="font-size:12px;color:var(--muted);margin-bottom:6px">✅ Grupo creado. Tu código secreto es:</div>
           <div id="ls-codigo-generado" style="font-size:28px;font-weight:800;color:var(--gold);letter-spacing:3px"></div>
           <div style="font-size:11px;color:var(--muted);margin-top:6px">Comparte este código con tus compañeros</div>
-          <button class="btn btn-primary" style="margin-top:14px;width:100%" id="btn-entrar-nuevo">Entrar →</button>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px">Introduciéndote en el sistema...</div>
         </div>
         <div id="ls-crear-form">
           <div style="margin-bottom:12px">
@@ -566,8 +566,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <div id="nombre-modal" class="modal-bg" style="z-index:10001">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:100%;max-width:340px;text-align:center">
     <div style="font-size:36px;margin-bottom:10px">👋</div>
-    <div style="font-size:17px;font-weight:700;margin-bottom:6px">¡Bienvenido!</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">¿Cómo te llamas? Así tus compañeros sabrán quién eres.</div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:6px" id="nombre-modal-titulo">¡Bienvenido!</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px" id="nombre-modal-desc">¿Cómo te llamas? Así tus compañeros sabrán quién eres.</div>
     <input id="nombre-input" type="text" placeholder="Tu nombre completo" style="margin-bottom:12px" oninput="const e=document.getElementById('nombre-modal-error');if(e)e.style.display='none'">
     <div id="nombre-modal-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px;text-align:left"></div>
     <button class="btn btn-primary" style="width:100%" id="btn-nombre-confirmar" onclick="nombreConfirmar()">Entrar ✊</button>
@@ -1982,7 +1982,7 @@ function awStartPolling() {
           render();
           // Show subtle sync indicator
           const ind = document.getElementById('sync-indicator');
-          if (ind) { ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',1500); }
+          if (ind) { ind.textContent = '↻ sincronizado'; ind.style.color = 'var(--green)'; ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',1500); }
         }
       }
     } catch(e) { console.warn('Poll error:', e); }
@@ -2100,6 +2100,8 @@ async function pinEntrar() {
       _nuevoNombreGrupo = doc.nombre;
       _docMiembros = miembros;
       _docDatos = doc.datos;
+      document.getElementById('nombre-modal-titulo').textContent = '¡Bienvenido!';
+      document.getElementById('nombre-modal-desc').textContent = '¿Cómo te llamas? Así tus compañeros sabrán quién eres.';
       document.getElementById('nombre-modal').classList.add('open');
       setTimeout(() => document.getElementById('nombre-input').focus(), 100);
     }
@@ -2205,6 +2207,44 @@ function mostrarColision(nombreExistente, nombreEscrito) {
 }
 
 
+// Colisión fuzzy detectada DESPUÉS de ya haber guardado el miembro — mostrar aviso emergente
+function _mostrarColisionWorkerFinal(nombreWorker, nombreEscrito) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = `
+    <div style="background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:28px;max-width:360px;width:100%;text-align:center">
+      <div style="font-size:36px;margin-bottom:10px">⚠️</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px">¿Eres tú?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px">Parece que ya hay un compañero llamado <strong style="color:var(--gold)">${nombreWorker}</strong> en el grupo. ¿Eres la misma persona?</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" style="flex:1" id="_cwf-si">Sí, soy yo ✓</button>
+        <button class="btn btn-ghost" style="flex:1" id="_cwf-no">No, soy otro</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+
+  document.getElementById('_cwf-si').onclick = async function() {
+    ov.remove();
+    window.AW_USER_NAME = nombreWorker;
+    // Corregir el nombre en miembros si fue guardado con el nombre escrito
+    const idx = _docMiembros.findIndex(m => norm(m.nombre) === norm(nombreEscrito));
+    if (idx >= 0) {
+      _docMiembros[idx].nombre = nombreWorker;
+      try {
+        await awDB.updateDocument(AW_DB, AW_COL, _nuevoDocId, { miembros: JSON.stringify(_docMiembros) });
+      } catch(e) { console.warn('Could not fix member name:', e); }
+    }
+    localStorage.setItem(lsUserKey(_nuevoDocId), JSON.stringify({ nombre: nombreWorker, esAdmin: window.AW_IS_ADMIN }));
+    localStorage.setItem('rs-session', JSON.stringify({ docId: _nuevoDocId, nombre: _nuevoNombreGrupo, esAdmin: window.AW_IS_ADMIN, userName: nombreWorker }));
+    window._miembrosCache = _docMiembros;
+    lsEntrar(_nuevoNombreGrupo);
+  };
+  document.getElementById('_cwf-no').onclick = function() {
+    ov.remove();
+    lsEntrar(_nuevoNombreGrupo);
+  };
+}
+
 async function reclamarIdentidad(nombre) {
   // User claims to be an existing member — restore their session
   // norm() is global
@@ -2252,11 +2292,24 @@ async function _guardarNuevoMiembro(nombre) {
     window._miembrosCache = _docMiembros;
   } catch(e) { console.warn('Could not save member:', e); }
 
-  document.getElementById('nombre-modal').classList.remove('open');
   S = loadState(_docDatos || null);
 
-  const yaExiste = S.workers.find(w => w.name.toLowerCase() === nombre.toLowerCase());
-  if (!yaExiste) {
+  // Buscar duplicado fuzzy en workers (norm + Levenshtein ≤ 2)
+  const nombreNormW = norm(nombre);
+  const workerDup = S.workers.find(w =>
+    norm(w.name) === nombreNormW || levenshtein(norm(w.name), nombreNormW) <= 2
+  );
+
+  if (workerDup && norm(workerDup.name) !== nombreNormW) {
+    // Colisión fuzzy no detectada antes (typo leve) — preguntar al usuario
+    document.getElementById('nombre-modal').classList.remove('open');
+    _mostrarColisionWorkerFinal(workerDup.name, nombre);
+    return;
+  }
+
+  document.getElementById('nombre-modal').classList.remove('open');
+
+  if (!workerDup) {
     S.workers.push({ id: Date.now(), name: nombre, conv: S.convenios.length > 0 ? S.convenios[0].id : null, sit: 'SA' });
     // Guardar inmediatamente en Appwrite (sin debounce) para que otros usuarios vean al nuevo miembro
     localStorage.setItem(lsDataKey(), JSON.stringify(S));
@@ -2338,7 +2391,12 @@ async function lsCrearGrupo() {
     _docDatos = estadoVacio;
     window.AW_DOC_ID = doc.$id;
     window.AW_IS_ADMIN = true;
-    S = loadState(estadoVacio); // inicializar S vacío para que la búsqueda en workers sea correcta
+    S = loadState(estadoVacio);
+    // Pedir nombre al creador igual que a cualquier otro miembro
+    document.getElementById('nombre-modal-titulo').textContent = '¡Grupo creado! ¿Cómo te llamas?';
+    document.getElementById('nombre-modal-desc').textContent = 'Eres el administrador. Dinos tu nombre para identificarte.';
+    document.getElementById('nombre-modal').classList.add('open');
+    setTimeout(() => document.getElementById('nombre-input').focus(), 100);
   } catch(e) {
     errEl.textContent = 'Error de conexión. No se pudo crear el grupo. Inténtalo de nuevo.';
     errEl.style.display = 'block';
@@ -2404,10 +2462,6 @@ document.addEventListener('DOMContentLoaded', () => {
     ind.textContent = '↻ sincronizado';
     logo.appendChild(ind);
   }
-  // Entrar nuevo group button
-  document.addEventListener('click', function(e) {
-    if (e.target && e.target.id === 'btn-entrar-nuevo') lsEntrarNuevo();
-  });
   // Enter key for code search
   const inp = document.getElementById('ls-codigo-buscar');
   if (inp) inp.addEventListener('keydown', e => { if (e.key==='Enter') lsBuscarGrupo(); });
@@ -2442,7 +2496,16 @@ document.addEventListener('DOMContentLoaded', () => {
             try { S = migrateState(JSON.parse(doc.datos)); render(); } catch(e) {}
           }
           try { window._miembrosCache = JSON.parse(doc.miembros || '[]'); } catch(e) {}
-        }).catch(function(e) { console.warn('BG sync error:', e); });
+        }).catch(function(e) {
+          console.warn('BG sync error:', e);
+          // Mostrar aviso sutil de que se trabaja con datos locales
+          const ind = document.getElementById('sync-indicator');
+          if (ind) {
+            ind.textContent = '⚠ sin conexión · datos locales';
+            ind.style.color = 'var(--gold)';
+            ind.style.opacity = '1';
+          }
+        });
         awStartPolling();
       }, 1000);
     }
