@@ -201,7 +201,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   nav a span:not(.ni){font-size:10px;display:block}
   nav a .ni{font-size:18px}
   .badge{display:none}
-  #nav-salir-mobile{display:flex!important;border-bottom-color:transparent!important;background:none!important}
   main{padding:16px 14px;max-width:100%}
   .kpis{grid-template-columns:1fr 1fr}
   .grid2,.grid3,.sim-grid{grid-template-columns:1fr}
@@ -308,9 +307,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <a onclick="go('historial')" data-tab="historial">
       <span class="ni">📅</span><span>Historial</span>
     </a>
-    <a onclick="cerrarSesion()" id="nav-salir-mobile" style="display:none;color:var(--red);border-left:none">
-      <span class="ni">✕</span><span>Salir</span>
-    </a>
   </nav>
 </aside>
 
@@ -328,7 +324,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <!-- CAJA GRANDE -->
     <div id="res-caja"></div>
 
-    <!-- DOS COLUMNAS: Trabajadores pagan / Huelguistas cobran -->
+    <!-- DOS COLUMNAS: SM pagan / Huelguistas cobran -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
       <div class="card" style="margin-bottom:0">
         <div class="card-title" style="color:var(--gold)">📤 Trabajan — deben pagar</div>
@@ -548,7 +544,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 
 
 <!-- ══ MODAL PIN ══ -->
-<div id="pin-modal" class="modal-bg" style="z-index:10000">
+<div id="pin-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:100%;max-width:320px;text-align:center;overflow:hidden">
     <div style="font-size:32px;margin-bottom:8px">🔐</div>
     <div style="font-size:17px;font-weight:700;margin-bottom:4px" id="pin-modal-nombre"></div>
@@ -556,21 +552,21 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <input id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="••••" style="text-align:center;font-size:24px;letter-spacing:8px;margin-bottom:16px;width:100%;box-sizing:border-box">
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" style="flex:1" onclick="pinCerrar()">Cancelar</button>
-      <button class="btn btn-primary" style="flex:1" id="btn-pin-entrar" onclick="pinEntrar()">Entrar</button>
+      <button class="btn btn-primary" style="flex:1" onclick="pinEntrar()">Entrar</button>
     </div>
     <div id="pin-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none">PIN incorrecto</div>
   </div>
 </div>
 
 <!-- ══ MODAL NOMBRE ══ -->
-<div id="nombre-modal" class="modal-bg" style="z-index:10001">
+<div id="nombre-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:100%;max-width:340px;text-align:center">
     <div style="font-size:36px;margin-bottom:10px">👋</div>
     <div style="font-size:17px;font-weight:700;margin-bottom:6px">¡Bienvenido!</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:20px">¿Cómo te llamas? Así tus compañeros sabrán quién eres.</div>
     <input id="nombre-input" type="text" placeholder="Tu nombre completo" style="margin-bottom:12px" oninput="const e=document.getElementById('nombre-modal-error');if(e)e.style.display='none'">
     <div id="nombre-modal-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px;text-align:left"></div>
-    <button class="btn btn-primary" style="width:100%" id="btn-nombre-confirmar" onclick="nombreConfirmar()">Entrar ✊</button>
+    <button class="btn btn-primary" style="width:100%" onclick="nombreConfirmar()">Entrar ✊</button>
   </div>
 </div>
 
@@ -681,7 +677,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 const DEFAULTS = {
   hours: 4,
   simDays: 2,
-  workers: [],
+  workers: [
+    {id:1,  name:"Manel Jerez",    conv:"Irvia G5", sit:"Trabaja", paid:true,  collected:false},
+    {id:2,  name:"Oriol Sibecas",  conv:"Irvia G6", sit:"Trabaja", paid:true,  collected:false},
+    {id:3,  name:"Juan Sanchez",   conv:"Irvia G5", sit:"Trabaja", paid:false, collected:false},
+    {id:4,  name:"Oscar Quesada",  conv:"Irvia G6", sit:"Trabaja", paid:false, collected:false},
+    {id:5,  name:"Jesus Martin",   conv:"Irvia G6", sit:"Trabaja", paid:false, collected:false},
+    {id:6,  name:"Alex Morda",     conv:"Irvia G6", sit:"H",  paid:false, collected:true },
+    {id:7,  name:"Farid",          conv:"Irvia G5", sit:"H",  paid:false, collected:true },
+    {id:8,  name:"David Sanchez",  conv:"Irvia G5", sit:"H",  paid:false, collected:false},
+    {id:9,  name:"Daniel Gismero", conv:"Irvia G6", sit:"H",  paid:false, collected:false},
+    {id:10, name:"Yasen",          conv:"Irvia G6", sit:"H",  paid:false, collected:false},
+    {id:11, name:"Luis",           conv:"Alstom",   sit:"H",  paid:false, collected:false},
+    {id:12, name:"Oscar Alonso",   conv:"Irvia G5", sit:"H",  paid:false, collected:false},
+    {id:13, name:"Sergio Moreida", conv:"Irvia G5", sit:"H",  paid:false, collected:false},
+    {id:14, name:"Ruben Sancho",   conv:"Irvia G5", sit:"H",  paid:false, collected:false},
+  ],
   convenios: [
     {id:"Irvia G6", name:"Irvia Grupo 6", salary: 2002.25/30},
     {id:"Irvia G5", name:"Irvia Grupo 5", salary: 2063.39/30},
@@ -696,40 +707,20 @@ const DEFAULTS = {
 
 let S = {}; // loaded after login
 
-function lsDataKey() {
-  return window.AW_DOC_ID ? 'rs-data-' + window.AW_DOC_ID : 'rs-data-local';
-}
-
-function migrateState(s) {
-  if (!s.historial)    s.historial    = [];
-  if (!s.workers)      s.workers      = [];
-  if (!s.convenios)    s.convenios    = [];
-  if (!s.complementos) s.complementos = [];
-  if (!s.hours)        s.hours        = 4;
-  if (!s.simDays)      s.simDays      = 2;
-  // Migrar sit antiguo 'SM' -> 'Trabaja' (unificación de valores)
-  s.workers.forEach(w => { if (w.sit === 'SM') w.sit = 'Trabaja'; });
-  return s;
-}
-
 function loadState(datosJSON) {
   try {
-    if (datosJSON) return migrateState(JSON.parse(datosJSON));
-    const raw = localStorage.getItem(lsDataKey());
-    if (raw) return migrateState(JSON.parse(raw));
+    if (datosJSON) return JSON.parse(datosJSON);
+    const raw = localStorage.getItem('reparto-v2');
+    if (raw) return JSON.parse(raw);
   } catch(e){}
   return JSON.parse(JSON.stringify(DEFAULTS));
 }
 
-let _saveDebounce = null;
 function saveState() {
-  localStorage.setItem(lsDataKey(), JSON.stringify(S));
-  // Sync to Appwrite con debounce — evita ráfagas al mover sliders
+  localStorage.setItem('reparto-v2', JSON.stringify(S));
+  // Sync to Appwrite if we have an active group
   if (window.AW_DOC_ID) {
-    if (_saveDebounce) clearTimeout(_saveDebounce);
-    _saveDebounce = setTimeout(() => {
-      awSaveData(JSON.stringify(S)).catch(e => console.warn('Appwrite sync error:', e));
-    }, 600);
+    awSaveData(JSON.stringify(S)).catch(e => console.warn('Appwrite sync error:', e));
   }
 }
 
@@ -744,7 +735,7 @@ function calc(hours) {
   const active = workers.filter(w => w.sit !== 'NP' && w.sit !== 'SA');
   const total = active.length;
   const huelga = workers.filter(w => w.sit === 'H');
-  const sm = workers.filter(w => w.sit === 'Trabaja');
+  const sm = workers.filter(w => w.sit === 'SM');
 
   // Weighted average salary (only active participants)
   let salarySum = 0;
@@ -797,17 +788,10 @@ function fmt(n) {
   return n.toFixed(2).replace('.',',') + ' €';
 }
 
-function norm(s) {
-  return s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
-}
-
 // ══════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════
-let _activeTab = 'resumen';
-
 function go(tab) {
-  _activeTab = tab;
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   // Set today's date on historial input if empty
   const hf = document.getElementById('hist-fecha');
@@ -823,26 +807,19 @@ function go(tab) {
 // ══════════════════════════════════════════════
 // RENDER
 // ══════════════════════════════════════════════
-const TAB_RENDERERS = {
-  resumen:    (c) => renderResumen(c),
-  companeros: (c) => renderWorkers(c),
-  config:     (c) => renderConfig(c),
-  analisis:   (c) => renderAnalisis(c),
-  simulador:  ()  => { const d = parseInt(document.getElementById('days-slider').value) || S.simDays; simUpdate(d); },
-  historial:  ()  => renderHistorial(),
-  miembros:   ()  => renderMiembros(),
-};
-
 function render() {
-  const c = calc();
-  updateBadge(c);
-  const fn = TAB_RENDERERS[_activeTab];
-  if (fn) fn(c);
+  renderResumen();
+  renderWorkers();
+  renderConfig();
+  renderAnalisis();
+  renderSim();
+  renderHistorial();
+  updateBadge();
 }
 
-function updateBadge(c) {
+function updateBadge() {
   const pend = S.workers.filter(w =>
-    (w.sit === 'Trabaja' && !w.paid) || (w.sit === 'H' && !w.collected)
+    (w.sit === 'SM' && !w.paid) || (w.sit === 'H' && !w.collected)
   ).length;
   const b = document.getElementById('badge-pend');
   b.textContent = pend;
@@ -850,8 +827,9 @@ function updateBadge(c) {
 }
 
 // ── RESUMEN ──
-function renderResumen(c) {
-  const totalSMPend = S.workers.filter(w => w.sit==='Trabaja' && !w.paid).length;
+function renderResumen() {
+  const c = calc();
+  const totalSMPend = S.workers.filter(w => w.sit==='SM' && !w.paid).length;
   const totalHPend  = S.workers.filter(w => w.sit==='H'  && !w.collected).length;
   const pendTotal   = totalSMPend + totalHPend;
 
@@ -894,7 +872,7 @@ function renderResumen(c) {
   `;
 
   // ── CAJA DEL ORGANIZADOR ──
-  const smWorkers  = S.workers.filter(w=>w.sit==='Trabaja');
+  const smWorkers  = S.workers.filter(w=>w.sit==='SM');
   const hWorkers   = S.workers.filter(w=>w.sit==='H');
   const smPaid     = smWorkers.filter(w=>w.paid);
   const smPending  = smWorkers.filter(w=>!w.paid);
@@ -903,7 +881,7 @@ function renderResumen(c) {
 
   const cajaEnMano    = smPaid.length * c.smPays;
   const cajaEntregada = hCollected.length * c.hCollects;
-  const cajaReal      = Math.round((cajaEnMano - cajaEntregada) * 100) / 100;
+  const cajaReal      = cajaEnMano - cajaEntregada;
   const pendCobrar    = smPending.length * c.smPays;
   const pendEntregar  = hPending.length * c.hCollects;
 
@@ -912,15 +890,15 @@ function renderResumen(c) {
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px 28px 22px;margin-bottom:18px;position:relative;overflow:hidden">
       <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--green),var(--blue))"></div>
       <div style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px">💵 Dinero en mano ahora mismo</div>
-      <div style="font-family:'DM Sans',sans-serif;font-size:52px;font-weight:800;color:${cajaReal >= 0?'var(--green)':'var(--red)'};line-height:1">${fmt(Math.abs(cajaReal) < 0.01 ? 0 : cajaReal)}</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:52px;font-weight:800;color:${cajaReal>=0?'var(--green)':'var(--red)'};line-height:1">${fmt(cajaReal)}</div>
       <div style="font-size:13px;color:var(--muted);margin-top:8px">Cobrado de los que trabajan (${fmt(cajaEnMano)}) menos entregado a huelguistas (${fmt(cajaEntregada)})</div>
 
       <!-- 3 bloques simétricos -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-top:20px;padding-top:18px;border-top:1px solid var(--border)">
         ${[
-          {icon:'📥', label:'Cobrado trabajadores',       val:fmt(cajaEnMano),  col:'var(--gold)',  sub:smPaid.length+' de '+smWorkers.length+' pagaron',    pct:smWorkers.length>0?smPaid.length/smWorkers.length*100:0,    barCol:'var(--gold)'},
+          {icon:'📥', label:'Cobrado SM',       val:fmt(cajaEnMano),  col:'var(--gold)',  sub:smPaid.length+' de '+smWorkers.length+' pagaron',    pct:smWorkers.length>0?smPaid.length/smWorkers.length*100:0,    barCol:'var(--gold)'},
           {icon:'📤', label:'Entregado huelga', val:fmt(cajaEntregada),col:'var(--blue)', sub:hCollected.length+' de '+hWorkers.length+' cobraron', pct:hWorkers.length>0?hCollected.length/hWorkers.length*100:0,  barCol:'var(--blue)'},
-          {icon:'⏳', label:'Pte. cobrar',      val:fmt(pendCobrar),  col:smPending.length>0?'var(--red)':'var(--green)', sub:smPending.length+' trabajadores sin pagar', pct:smWorkers.length>0?smPending.length/smWorkers.length*100:0, barCol:'var(--red)'},
+          {icon:'⏳', label:'Pte. cobrar',      val:fmt(pendCobrar),  col:smPending.length>0?'var(--red)':'var(--green)', sub:smPending.length+' SM sin pagar', pct:smWorkers.length>0?smPending.length/smWorkers.length*100:0, barCol:'var(--red)'},
         ].map((b,i) => `
           <div style="padding:0 ${i===1?'10px':i===0?'10px 10px 0':'0 0 0 10px'};border-left:${i>0?'1px solid var(--border)':'none'}">
             <div style="font-size:10px;color:var(--muted);height:28px;display:flex;align-items:center;gap:4px">${b.icon} ${b.label}</div>
@@ -978,7 +956,7 @@ function renderResumen(c) {
   document.getElementById('res-progress').innerHTML = `
     <div class="prog-wrap">
       <div class="prog-label">
-        <span>Trabajan — pagos realizados</span>
+        <span>SM — pagos realizados</span>
         <span style="color:var(--gold)">${smDone} / ${c.nSM}</span>
       </div>
       <div class="prog"><div class="prog-fill" style="width:${c.nSM>0?smDone/c.nSM*100:0}%;background:var(--gold)"></div></div>
@@ -1007,26 +985,22 @@ function barLabelCell(label) {
 }
 
 // ── WORKERS ──
-async function renderWorkers(c) {
+async function renderWorkers() {
+  // Refresh miembros cache
+  if (window.AW_DOC_ID) {
+    try {
+      const doc = await awGetGrupo(window.AW_DOC_ID);
+      window._miembrosCache = JSON.parse(doc.miembros || '[]');
+    } catch(e) {}
+  }
   const isAdmin = window.AW_IS_ADMIN === true;
+  const c = calc();
   const tbody = document.getElementById('workers-table');
   if (S.workers.length === 0) {
     tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="ei">👥</div><p>No hay compañeros. Añade el primero.</p></div></td></tr>`;
-  } else {
-    tbody.innerHTML = _buildWorkersHTML(c, isAdmin);
+    return;
   }
-  // Refrescar caché de miembros en background (sin bloquear el render)
-  if (window.AW_DOC_ID) {
-    awGetGrupo(window.AW_DOC_ID).then(doc => {
-      window._miembrosCache = JSON.parse(doc.miembros || '[]');
-      // Re-render solo la columna de roles si algo cambió
-      if (tbody && S.workers.length > 0) tbody.innerHTML = _buildWorkersHTML(c, isAdmin);
-    }).catch(() => {});
-  }
-}
-
-function _buildWorkersHTML(c, isAdmin) {
-  return S.workers.map(w => {
+  tbody.innerHTML = S.workers.map(w => {
     const isH = w.sit === 'H';
     const isNP = w.sit === 'NP';
     const done = isH ? w.collected : w.paid;
@@ -1050,7 +1024,7 @@ function _buildWorkersHTML(c, isAdmin) {
     const sitOptions = `
       <option value="SA" ${w.sit==='SA'?'selected':''}>Sin asignar</option>
       <option value="H"  ${w.sit==='H' ?'selected':''}>Huelga</option>
-      <option value="Trabaja" ${w.sit==='Trabaja'?'selected':''}>Trabaja</option>
+      <option value="SM" ${w.sit==='SM'?'selected':''}>Trabaja</option>
       <option value="NP" ${w.sit==='NP'?'selected':''}>No participa</option>`;
     return `
       <tr>
@@ -1069,12 +1043,12 @@ function _buildWorkersHTML(c, isAdmin) {
             ${sitOptions}
           </select>
         </td>
-        <td style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:${isH?'var(--green)':'var(--gold)'};text-align:right;white-space:nowrap">${(isNP || w.sit==='SA') ? '—' : ((isH?'+':'−')+fmt(importe))}</td>
+        <td style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:${isH?'var(--green)':'var(--gold)'};text-align:right;white-space:nowrap">${isNP?'—':((isH?'+':'−')+fmt(importe))}</td>
         <td style="text-align:center;white-space:nowrap">
           ${(() => {
             if (!window.AW_DOC_ID) return '';
             const miembros = window._miembrosCache || [];
-            // norm() is global
+            const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
             const m = miembros.find(x => norm(x.nombre) === norm(w.name));
             // Badge based on miembros if found, otherwise default lector
             const esAdmin = m ? m.esAdmin : false;
@@ -1159,7 +1133,7 @@ async function toggleAdminMiembroByName(workerId) {
   if (!worker) return;
   const nombre = worker.name;
   let miembros = window._miembrosCache || [];
-  // norm() is global
+  const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
   const idx = miembros.findIndex(m => norm(m.nombre) === norm(nombre));
   if (idx < 0) {
     // Not in miembros yet — add them
@@ -1170,7 +1144,7 @@ async function toggleAdminMiembroByName(workerId) {
   try {
     await awDB.updateDocument(AW_DB, AW_COL, window.AW_DOC_ID, { miembros: JSON.stringify(miembros) });
     window._miembrosCache = miembros;
-    render();
+    renderWorkers();
   } catch(e) { alert('Error al actualizar el rol'); }
 }
 
@@ -1209,8 +1183,9 @@ function svgBar(val, max, col, label, sublabel) {
     </div>`;
 }
 
-function renderAnalisis(c) {
-  const smW = S.workers.filter(w=>w.sit==='Trabaja');
+function renderAnalisis() {
+  const c = calc();
+  const smW = S.workers.filter(w=>w.sit==='SM');
   const hW  = S.workers.filter(w=>w.sit==='H');
 
   // KPIs
@@ -1244,7 +1219,7 @@ function renderAnalisis(c) {
     {val:c.lossParcial,     col:'#ff5c5c', label:'Sin reparto',   sub:'huelguista'},
     {val:c.lossWithParcial, col:'#2ecc71', label:'Con reparto',   sub:'por persona'},
     {val:c.hCollects,       col:'#f5c518', label:'Ahorro',        sub:'huelguista'},
-    {val:c.smPays,          col:'#4da6ff', label:'Trabajan',       sub:'cada uno'},
+    {val:c.smPays,          col:'#4da6ff', label:'SM paga',       sub:'cada uno'},
   ];
   document.getElementById('an-chart-compare').innerHTML = `
     <div style="font-size:11px;color:#6b7a99;margin-bottom:16px">Valores por persona · ${S.hours}h de huelga</div>
@@ -1320,7 +1295,7 @@ function renderAnalisis(c) {
   const convRows = S.convenios.map((cv,i) => {
     const count  = S.workers.filter(w=>w.conv===cv.id).length;
     const hCount = S.workers.filter(w=>w.conv===cv.id && w.sit==='H').length;
-    const smCount= S.workers.filter(w=>w.conv===cv.id && w.sit==='Trabaja').length;
+    const smCount= S.workers.filter(w=>w.conv===cv.id && w.sit==='SM').length;
     const pct    = S.workers.length > 0 ? (count/S.workers.length*100).toFixed(0) : 0;
     const totalComps = S.complementos.reduce((s,cp)=>s+(cp.vals[cv.id]||0),0);
     const totalDia   = cv.salary + totalComps;
@@ -1383,7 +1358,7 @@ function renderAnalisis(c) {
   // Participación real (SM + NP cuentan como trabajadores ese día)
   const totalAll   = S.workers.length;
   const nHuelga    = S.workers.filter(w => w.sit === 'H').length;
-  const nSMexp     = S.workers.filter(w => w.sit === 'Trabaja').length;
+  const nSMexp     = S.workers.filter(w => w.sit === 'SM').length;
   const nNP        = S.workers.filter(w => w.sit === 'NP').length;
   const nTrabajan  = nSMexp + nNP;  // SM explícitos + no participan
   const pctH       = totalAll > 0 ? (nHuelga   / totalAll * 100).toFixed(1) : 0;
@@ -1441,7 +1416,7 @@ function renderAnalisis(c) {
     document.getElementById('an-progress').innerHTML = `
     <div class="prog-wrap">
       <div class="prog-label">
-        <span>Trabajan — pagos realizados</span>
+        <span>SM — pagos realizados</span>
         <span style="color:var(--gold);font-weight:600">${smDone} / ${smW.length}</span>
       </div>
       <div class="prog"><div class="prog-fill" style="width:${smW.length>0?smDone/smW.length*100:0}%;background:var(--gold)"></div></div>
@@ -1471,7 +1446,7 @@ function renderAnalisis(c) {
 }
 
 // ── CONFIG ──
-function renderConfig(c) {
+function renderConfig() {
   // Slider
   const slider = document.getElementById('hours-slider');
   slider.value = S.hours;
@@ -1525,6 +1500,7 @@ function renderConfig(c) {
   }).join('');
 
   // Calc info
+  const c = calc();
   document.getElementById('calc-info').innerHTML = `
     <div class="grid3" style="gap:12px">
       <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Salario medio ponderado</div><div style="font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700">${fmt(c.avgSalary)}<span style="font-size:12px;color:var(--muted)">/día</span></div></div>
@@ -1535,6 +1511,11 @@ function renderConfig(c) {
 }
 
 // ── SIMULATOR ──
+function renderSim() {
+  const d = parseInt(document.getElementById('days-slider').value) || S.simDays;
+  simUpdate(d);
+}
+
 function simUpdate(days) {
   S.simDays = parseInt(days);
   document.getElementById('days-display').textContent = days + (days==1?' día':' días');
@@ -1550,21 +1531,9 @@ function simUpdate(days) {
   const conFull   = c.lossWithFull * d;
   const ahorroFull = (c.lossFull - c.lossWithFull) * d;
 
-  // Días de resistencia extra (fórmula Excel W2:W11)
-  function diasExtra(ahorro, cuotaDiaria, horasJornada) {
-    if (cuotaDiaria <= 0) return '—';
-    const ratio = ahorro / cuotaDiaria;
-    const dias  = Math.floor(ratio);
-    const horas = Math.round((ratio - dias) * horasJornada);
-    // Si horas redondea a jornada completa, sube un día
-    const diasFinal  = horas >= horasJornada ? dias + 1 : dias;
-    const horasFinal = horas >= horasJornada ? 0 : horas;
-    if (diasFinal === 0 && horasFinal === 0) return '0 horas extra';
-    if (horasFinal === 0) return `${diasFinal} día${diasFinal !== 1 ? 's' : ''} extra`;
-    return `${diasFinal} día${diasFinal !== 1 ? 's' : ''} y ${horasFinal}h extra`;
-  }
-  const resistenciaParcial = diasExtra(ahorroParcial, c.lossWithParcial, S.hours);
-  const resistenciaFull    = diasExtra(ahorroFull,    c.lossWithFull,    8);
+  // Días de resistencia
+  const diasP = c.lossParcial > 0 ? fondoParcial / c.fundParcial : 0;
+  const diasF = c.lossFull    > 0 ? (c.fundFull*d) / c.fundFull   : 0;
 
   document.getElementById('sim-results').innerHTML = `
     <div class="sim-card" style="border-top:3px solid var(--blue)">
@@ -1583,11 +1552,6 @@ function simUpdate(days) {
         <span style="color:var(--muted)">El grupo protege</span>
         <strong style="color:var(--blue)">${fmt(fondoParcial)}</strong>
       </div>
-      <div style="margin-top:16px;padding:14px 16px;background:rgba(94,186,255,.08);border:1px solid rgba(94,186,255,.25);border-radius:10px;text-align:center">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">podéis aguantar</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:32px;font-weight:800;color:var(--blue);line-height:1">${resistenciaParcial}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:5px">más de huelga gracias al reparto</div>
-      </div>
     </div>
     <div class="sim-card" style="border-top:3px solid var(--red)">
       <h4>Huelga Completa · 8h × ${d} día${d>1?'s':''}</h4>
@@ -1605,13 +1569,10 @@ function simUpdate(days) {
         <span style="color:var(--muted)">El grupo protege</span>
         <strong style="color:var(--blue)">${fmt(c.fundFull*d)}</strong>
       </div>
-      <div style="margin-top:16px;padding:14px 16px;background:rgba(94,186,255,.08);border:1px solid rgba(94,186,255,.25);border-radius:10px;text-align:center">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">podéis aguantar</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:32px;font-weight:800;color:var(--blue);line-height:1">${resistenciaFull}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:5px">más de huelga gracias al reparto</div>
-      </div>
     </div>
   `;
+
+  // Chart
   const maxV = Math.max(sinParcial, sinFull) * 1.15;
   document.getElementById('sim-chart').innerHTML = `
     <table style="width:100%;border-collapse:collapse;table-layout:fixed">
@@ -1643,7 +1604,6 @@ function simUpdate(days) {
 // ACTIONS
 // ══════════════════════════════════════════════
 function inlineUpdateWorker(id, field, value) {
-  if (!window.AW_IS_ADMIN) return;
   const w = S.workers.find(x=>x.id===id);
   if (!w) return;
   w[field] = value;
@@ -1652,16 +1612,14 @@ function inlineUpdateWorker(id, field, value) {
 }
 
 function toggleStatus(id) {
-  if (!window.AW_IS_ADMIN) return;
   const w = S.workers.find(x=>x.id===id);
   if (!w) return;
-  if (w.sit==='Trabaja') w.paid = !w.paid;
+  if (w.sit==='SM') w.paid = !w.paid;
   else w.collected = !w.collected;
   saveState(); render();
 }
 
 function deleteWorker(id) {
-  if (!window.AW_IS_ADMIN) return;
   if (!confirm('¿Eliminar este compañero?')) return;
   S.workers = S.workers.filter(w=>w.id!==id);
   saveState(); render();
@@ -1693,7 +1651,8 @@ function addWorker() {
   if (!name) { alert('Introduce un nombre'); return; }
   const conv = document.getElementById('w-conv').value;
   const sit  = document.getElementById('w-sit').value;
-  S.workers.push({id: Date.now(), name, conv, sit, paid:false, collected:false});
+  const newId = S.workers.length > 0 ? Math.max(...S.workers.map(w=>w.id))+1 : 1;
+  S.workers.push({id:newId, name, conv, sit, paid:false, collected:false});
   document.getElementById('w-name').value = '';
   closeModal('add-worker');
   saveState(); render();
@@ -1816,6 +1775,7 @@ function addHistorial() {
   const tipo  = document.getElementById('hist-tipo').value;
   const nota  = document.getElementById('hist-nota').value.trim();
   if (!fecha) { alert('Selecciona una fecha'); return; }
+  if (!S.historial) S.historial = [];
   // Prevent duplicate dates
   if (S.historial.find(d => d.fecha === fecha)) {
     alert('Ya existe un registro para esta fecha'); return;
@@ -1832,6 +1792,7 @@ function deleteHistorial(id) {
 }
 
 function renderHistorial() {
+  if (!S.historial) S.historial = [];
   const c = calc();
   const hist = S.historial;
 
@@ -1974,11 +1935,11 @@ function awStartPolling() {
     try {
       const doc = await awGetGrupo(window.AW_DOC_ID);
       if (doc.datos) {
-        const remoto = migrateState(JSON.parse(doc.datos));
+        const remoto = JSON.parse(doc.datos);
         const local  = JSON.stringify(S);
         if (JSON.stringify(remoto) !== local) {
           S = remoto;
-          localStorage.setItem(lsDataKey(), doc.datos);
+          localStorage.setItem('reparto-v2', doc.datos);
           render();
           // Show subtle sync indicator
           const ind = document.getElementById('sync-indicator');
@@ -2041,7 +2002,7 @@ async function lsBuscarGrupo() {
       lsSeleccionar(window._grupoEncontrado.$id, window._grupoEncontrado.nombre);
     });
   } catch(e) {
-    resEl.innerHTML = '<span style="color:var(--red);font-size:12px">⚠ Error de conexión. Comprueba tu red e inténtalo de nuevo.</span>';
+    resEl.innerHTML = '<span style="color:var(--red);font-size:12px">⚠ Error: ' + (e.message || e) + '</span>';
   }
 }
 
@@ -2050,12 +2011,12 @@ function lsSeleccionar(id, nombre) {
   document.getElementById('pin-modal-nombre').textContent = nombre;
   document.getElementById('pin-input').value = '';
   document.getElementById('pin-error').style.display = 'none';
-  document.getElementById('pin-modal').classList.add('open');
+  document.getElementById('pin-modal').style.display = 'flex';
   setTimeout(() => document.getElementById('pin-input').focus(), 100);
 }
 
 function pinCerrar() {
-  document.getElementById('pin-modal').classList.remove('open');
+  document.getElementById('pin-modal').style.display = 'none';
   lsGrupoSeleccionado = null;
 }
 
@@ -2064,20 +2025,16 @@ async function pinEntrar() {
   const errEl = document.getElementById('pin-error');
   if (!pinIntroducido) return;
 
-  const btn = document.getElementById('btn-pin-entrar');
-  if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
-
   try {
     const doc = await awGetGrupo(lsGrupoSeleccionado.id);
     if (pinIntroducido !== doc.pin) {
       errEl.textContent = 'PIN incorrecto';
       errEl.style.display = 'block';
       document.getElementById('pin-input').value = '';
-      if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
       return;
     }
     errEl.style.display = 'none';
-    document.getElementById('pin-modal').classList.remove('open');
+    document.getElementById('pin-modal').style.display = 'none';
     window.AW_DOC_ID = doc.$id;
 
     // Check if admin (creator stored in miembros)
@@ -2092,21 +2049,21 @@ async function pinEntrar() {
       window.AW_IS_ADMIN = u.esAdmin || false;
       window.AW_USER_NAME = u.nombre;
       S = loadState(doc.datos || null);
+      if (!S.historial) S.historial = [];
       lsEntrar(doc.nombre);
     } else {
       // Primera vez — preguntar nombre
-      window.AW_IS_ADMIN = !adminEntry;
+      window.AW_IS_ADMIN = !adminEntry; // Si no hay admin aún, este es el admin (creador)
       _nuevoDocId = doc.$id;
       _nuevoNombreGrupo = doc.nombre;
       _docMiembros = miembros;
       _docDatos = doc.datos;
-      document.getElementById('nombre-modal').classList.add('open');
+      document.getElementById('nombre-modal').style.display = 'flex';
       setTimeout(() => document.getElementById('nombre-input').focus(), 100);
     }
   } catch(e) {
-    errEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
+    errEl.textContent = 'Error de conexión';
     errEl.style.display = 'block';
-    if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
   }
 }
 
@@ -2126,50 +2083,24 @@ async function nombreConfirmar() {
   const nombre = document.getElementById('nombre-input').value.trim();
   if (!nombre) { document.getElementById('nombre-input').focus(); return; }
 
-  const btn = document.getElementById('btn-nombre-confirmar');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
+  const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
+  const nombreNorm = norm(nombre);
 
-  try {
-    const nombreNorm = norm(nombre);
-
-    // 1. Exact match en _docMiembros → reclamar sesión existente
-    const exacto = _docMiembros.find(m => norm(m.nombre) === nombreNorm);
-    if (exacto) {
-      await reclamarIdentidad(exacto.nombre);
-      return;
-    }
-
-    // 2. Similar en _docMiembros (typo ≤ 2) → sugerir que es la misma persona
-    const similar = _docMiembros.find(m => levenshtein(norm(m.nombre), nombreNorm) <= 2);
-    if (similar) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
-      mostrarSugerencia(similar, nombre);
-      return;
-    }
-
-    // 3. Colisión de nombre con workers del grupo — leer directo de _docDatos
-    // (S todavía no está cargado con los datos de este grupo en este punto)
-    let grupoWorkers = [];
-    try {
-      const datosGrupo = _docDatos ? JSON.parse(_docDatos) : null;
-      grupoWorkers = (datosGrupo && datosGrupo.workers) ? datosGrupo.workers : [];
-    } catch(e) { grupoWorkers = []; }
-
-    const workerMatch = grupoWorkers.find(w =>
-      norm(w.name) === nombreNorm || levenshtein(norm(w.name), nombreNorm) <= 2
-    );
-    if (workerMatch) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
-      mostrarColision(workerMatch.name, nombre);
-      return;
-    }
-
-    await _guardarNuevoMiembro(nombre);
-  } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Entrar ✊'; }
-    const errEl = document.getElementById('nombre-modal-error');
-    if (errEl) { errEl.textContent = 'Error al guardar. Inténtalo de nuevo.'; errEl.style.display = 'block'; }
+  // Exact match
+  const exacto = _docMiembros.find(m => norm(m.nombre) === nombreNorm);
+  if (exacto) {
+    mostrarSugerencia(exacto, nombre);
+    return;
   }
+
+  // Similar match (Levenshtein ≤ 2)
+  const similar = _docMiembros.find(m => levenshtein(norm(m.nombre), nombreNorm) <= 2);
+  if (similar) {
+    mostrarSugerencia(similar, nombre);
+    return;
+  }
+
+  await _guardarNuevoMiembro(nombre);
 }
 
 function mostrarSugerencia(miembro, nombreEscrito) {
@@ -2188,40 +2119,15 @@ function mostrarSugerencia(miembro, nombreEscrito) {
   };
 }
 
-function mostrarColision(nombreExistente, nombreEscrito) {
-  const errEl = document.getElementById('nombre-modal-error');
-  if (!errEl) return;
-  errEl.style.display = 'block';
-  errEl.innerHTML = '<div style="margin-bottom:8px">⚠️ Ya hay un compañero llamado <strong style="color:var(--gold)">' + nombreExistente + '</strong> en este grupo. ¿Eres tú?</div>'
-    + '<div style="display:flex;gap:8px">'
-    + '<button class="btn btn-primary btn-sm" style="flex:1" id="btn-colision-si">Sí, soy yo ✓</button>'
-    + '<button class="btn btn-ghost btn-sm" style="flex:1" id="btn-colision-no">No, soy otro</button>'
-    + '</div>';
-  document.getElementById('btn-colision-si').onclick = function() { reclamarIdentidad(nombreExistente); };
-  document.getElementById('btn-colision-no').onclick = function() {
-    errEl.style.display = 'none';
-    _guardarNuevoMiembro(nombreEscrito);
-  };
-}
-
 
 async function reclamarIdentidad(nombre) {
   // User claims to be an existing member — restore their session
-  // norm() is global
+  const norm = s => s ? s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : '';
   const m = _docMiembros.find(x => norm(x.nombre) === norm(nombre));
   const esAdmin = m ? m.esAdmin : false;
 
   window.AW_USER_NAME = nombre;
   window.AW_IS_ADMIN = esAdmin;
-
-  // Si no estaba en _docMiembros (venía solo de S.workers), añadirlo ahora
-  if (!m) {
-    const nuevoMiembro = { nombre, esAdmin: false, fecha: new Date().toISOString() };
-    _docMiembros.push(nuevoMiembro);
-    try {
-      await awDB.updateDocument(AW_DB, AW_COL, _nuevoDocId, { miembros: JSON.stringify(_docMiembros) });
-    } catch(e) { console.warn('Could not register member:', e); }
-  }
 
   // Save to localStorage so next time auto-login works
   localStorage.setItem(lsUserKey(_nuevoDocId), JSON.stringify({ nombre, esAdmin }));
@@ -2232,8 +2138,9 @@ async function reclamarIdentidad(nombre) {
     userName: nombre
   }));
 
-  document.getElementById('nombre-modal').classList.remove('open');
+  document.getElementById('nombre-modal').style.display = 'none';
   S = loadState(_docDatos || null);
+  if (!S.historial) S.historial = [];
   window._miembrosCache = _docMiembros;
 
   lsEntrar(_nuevoNombreGrupo);
@@ -2252,17 +2159,14 @@ async function _guardarNuevoMiembro(nombre) {
     window._miembrosCache = _docMiembros;
   } catch(e) { console.warn('Could not save member:', e); }
 
-  document.getElementById('nombre-modal').classList.remove('open');
+  document.getElementById('nombre-modal').style.display = 'none';
   S = loadState(_docDatos || null);
+  if (!S.historial) S.historial = [];
 
   const yaExiste = S.workers.find(w => w.name.toLowerCase() === nombre.toLowerCase());
   if (!yaExiste) {
     S.workers.push({ id: Date.now(), name: nombre, conv: S.convenios.length > 0 ? S.convenios[0].id : null, sit: 'SA' });
-    // Guardar inmediatamente en Appwrite (sin debounce) para que otros usuarios vean al nuevo miembro
-    localStorage.setItem(lsDataKey(), JSON.stringify(S));
-    if (window.AW_DOC_ID) {
-      awSaveData(JSON.stringify(S)).catch(e => console.warn('Appwrite sync error:', e));
-    }
+    saveState();
   }
 
   lsEntrar(_nuevoNombreGrupo);
@@ -2313,6 +2217,7 @@ function cerrarSesion() {
   document.getElementById('ls-buscar-resultado').innerHTML = '';
 }
 
+async function lsInit() { /* groups found by code */ }
 
 async function lsCrearGrupo() {
   const nombre = document.getElementById('ls-nombre').value.trim();
@@ -2338,9 +2243,8 @@ async function lsCrearGrupo() {
     _docDatos = estadoVacio;
     window.AW_DOC_ID = doc.$id;
     window.AW_IS_ADMIN = true;
-    S = loadState(estadoVacio); // inicializar S vacío para que la búsqueda en workers sea correcta
   } catch(e) {
-    errEl.textContent = 'Error de conexión. No se pudo crear el grupo. Inténtalo de nuevo.';
+    errEl.textContent = 'Error al crear: ' + (e.message || e);
     errEl.style.display = 'block';
   }
 }
@@ -2348,7 +2252,7 @@ async function lsCrearGrupo() {
 function lsEntrarNuevo() {
   const m = document.getElementById('nombre-modal');
   if (m) {
-    m.classList.add('open');
+    m.style.display = 'flex';
     setTimeout(() => {
       const inp = document.getElementById('nombre-input');
       if (inp) inp.focus();
@@ -2429,6 +2333,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.AW_USER_NAME = ses.userName || null;
       window._miembrosCache = [];
       S = loadState(null);
+      if (!S.historial) S.historial = [];
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('main-app').style.display = 'flex';
       document.getElementById('sidebar-grupo-nombre').textContent = ses.nombre || '';
@@ -2439,7 +2344,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(function() {
         awGetGrupo(ses.docId).then(function(doc) {
           if (doc.datos) {
-            try { S = migrateState(JSON.parse(doc.datos)); render(); } catch(e) {}
+            try { S = JSON.parse(doc.datos); render(); } catch(e) {}
           }
           try { window._miembrosCache = JSON.parse(doc.miembros || '[]'); } catch(e) {}
         }).catch(function(e) { console.warn('BG sync error:', e); });
